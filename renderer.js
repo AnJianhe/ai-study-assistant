@@ -392,14 +392,21 @@ function textOr(value, fallback) {
 /* 轻量 Markdown → HTML（先转义，避免注入） */
 function mdToHtml(src) {
   if (!src) return '';
+  // 先把 $...$ / $$...$$ 公式抽出来，避免被 markdown 处理和 HTML 转义破坏
+  const maths = [];
+  let s = String(src).replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, function (_m, block, inline) {
+    maths.push({ tex: block || inline, display: !!block });
+    return '\u0001M' + (maths.length - 1) + '\u0001';
+  });
   const blocks = [];
-  let s = esc(String(src));
+  s = esc(s);
   s = s.replace(/```[a-zA-Z0-9+#-]*\n?([\s\S]*?)```/g, function (_m, code) {
     blocks.push('<pre><code>' + code.replace(/\n$/, '') + '</code></pre>');
     return '\u0000' + (blocks.length - 1) + '\u0000';
   });
   s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
   s = s.replace(/^#{1,6}\s*(.+)$/gm, '<h4>$1</h4>');
+  s = s.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
   s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
   s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a data-act="open-url" data-url="$2">$1</a>');
@@ -407,7 +414,7 @@ function mdToHtml(src) {
     const p = chunk.trim();
     if (!p) return '';
     if (/^\u0000\d+\u0000$/.test(p)) return p;
-    if (/^<h4>/.test(p)) return p;
+    if (/^<(h4|blockquote|pre|ul|ol)/.test(p)) return p;
     const lines = p.split('\n');
     const isUl = lines.every(function (l) { return !l.trim() || /^[-*•]\s+/.test(l); }) && lines.some(function (l) { return /^[-*•]\s+/.test(l); });
     if (isUl) {
@@ -423,13 +430,55 @@ function mdToHtml(src) {
     }
     return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
   }).filter(Boolean).join('');
-  return html.replace(/\u0000(\d+)\u0000/g, function (_m, i) { return blocks[Number(i)] || ''; });
+  let out = html.replace(/\u0000(\d+)\u0000/g, function (_m, i) { return blocks[Number(i)] || ''; });
+  out = out.replace(/\u0001M(\d+)\u0001/g, function (_m, i) {
+    const item = maths[Number(i)];
+    return item ? katexToHtml(item.tex, item.display) : '';
+  });
+  return out;
+}
+
+/* 行内富文本：只处理公式 / 粗体 / 行内代码，不包裹段落（用于选项、答案等短文本） */
+function richInline(text) {
+  if (text === undefined || text === null || text === '') return '';
+  const maths = [];
+  let s = String(text).replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, function (_m, block, inline) {
+    maths.push({ tex: block || inline, display: !!block });
+    return '\u0001M' + (maths.length - 1) + '\u0001';
+  });
+  s = esc(s);
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  return s.replace(/\u0001M(\d+)\u0001/g, function (_m, i) {
+    const item = maths[Number(i)];
+    return item ? katexToHtml(item.tex, item.display) : '';
+  });
+}
+
+/* LaTeX 公式 → HTML（KaTeX 离线渲染；失败时退回原始文本，绝不会白屏） */
+function katexToHtml(tex, display) {
+  try {
+    if (window.katex && typeof window.katex.renderToString === 'function') {
+      return window.katex.renderToString(String(tex), {
+        displayMode: !!display,
+        throwOnError: false,
+        strict: 'ignore',
+        trust: false
+      });
+    }
+  } catch (err) {
+    /* 交给下面的兜底 */
+  }
+  return '<span class="math-fallback">' + esc('$' + String(tex) + '$') + '</span>';
 }
 
 /* ============================================================
  * 3. Toast / Modal
  * ============================================================ */
 let confirmResolve = null;
+
+// 调试钩子：方便自动化验证公式 / 富文本渲染（生产环境也保留，无副作用）
+window.__render = { mdToHtml: mdToHtml, richInline: richInline };
 
 function toast(message, type, duration) {
   const root = document.getElementById('toast-root');
@@ -1764,7 +1813,7 @@ function renderQuizAnswering(q) {
       const active = normalizeAnswer(userAnswer) === normalizeAnswer(opt.key);
       return '<button class="q-option' + (active ? ' is-active' : '') + '" data-act="quiz-answer" data-qid="' + esc(item.id) + '" data-value="' + esc(opt.key) + '">' +
         '<span class="q-option-key">' + esc(opt.key) + '</span>' +
-        '<span class="q-option-text">' + esc(opt.text) + '</span>' +
+        '<span class="q-option-text">' + richInline(opt.text) + '</span>' +
       '</button>';
     }).join('') + '</div>';
   } else if (item.type === 'fill') {
@@ -1785,7 +1834,7 @@ function renderQuizAnswering(q) {
         '<span class="grow"></span>' +
         '<button class="btn btn-ghost btn-sm" data-act="quiz-exit">' + icon('x') + '放弃本次</button>' +
       '</div>' +
-      '<div class="q-stem">' + esc(item.stem) + '</div>' +
+      '<div class="q-stem">' + mdToHtml(item.stem) + '</div>' +
       inputHtml +
       '<div class="q-foot">' +
         '<div class="q-dots">' +
@@ -2419,10 +2468,10 @@ function renderReportDetail(report) {
     return '<tr>' +
       '<td class="col-num">' + (idx + 1) + '</td>' +
       '<td>' +
-        '<div class="answer-stem">' + esc(item.stem) + '</div>' +
-        '<div class="answer-line">我的答案：<strong>' + esc(item.userAnswer || '（未作答）') + '</strong>' +
-          ' · 参考答案：<strong>' + esc(item.answer || '—') + '</strong></div>' +
-        (item.explanation ? '<div class="explain-box">' + esc(item.explanation) + '</div>' : '') +
+        '<div class="answer-stem">' + mdToHtml(item.stem) + '</div>' +
+        '<div class="answer-line">我的答案：<strong>' + richInline(item.userAnswer || '（未作答）') + '</strong>' +
+          ' · 参考答案：<strong>' + richInline(item.answer || '—') + '</strong></div>' +
+        (item.explanation ? '<div class="explain-box">' + mdToHtml(item.explanation) + '</div>' : '') +
       '</td>' +
       '<td class="col-result" style="color:' + resultColor + '">' + resultIcon + '</td>' +
     '</tr>';
@@ -2460,7 +2509,7 @@ function renderReportDetail(report) {
             ? '<div class="card">' +
                 '<div class="card-head card-head-tight"><div class="card-title">' + icon('check-circle') + '做得好的地方</div></div>' +
                 '<div class="point-list">' + ai.strengths.map(function (s) {
-                  return '<div class="point-item is-good"><div class="point-mark">✓</div><div>' + esc(s) + '</div></div>';
+                  return '<div class="point-item is-good"><div class="point-mark">✓</div><div>' + mdToHtml(s) + '</div></div>';
                 }).join('') + '</div></div>'
             : '') +
           (ai.weaknesses && ai.weaknesses.length
@@ -2468,9 +2517,9 @@ function renderReportDetail(report) {
                 '<div class="card-head card-head-tight"><div class="card-title">' + icon('target') + '薄弱点</div></div>' +
                 '<div class="point-list">' + ai.weaknesses.map(function (w) {
                   return '<div class="point-item is-bad"><div class="point-mark">!</div>' +
-                    '<div><div class="point-title">' + esc(w.knowledgePoint || '待巩固') + '</div>' +
-                    (w.evidence ? '<div class="point-evidence">' + esc(w.evidence) + '</div>' : '') +
-                    (w.advice ? '<div class="point-desc">' + esc(w.advice) + '</div>' : '') + '</div></div>';
+                    '<div><div class="point-title">' + mdToHtml(w.knowledgePoint || '待巩固') + '</div>' +
+                    (w.evidence ? '<div class="point-evidence">' + mdToHtml(w.evidence) + '</div>' : '') +
+                    (w.advice ? '<div class="point-desc">' + mdToHtml(w.advice) + '</div>' : '') + '</div></div>';
                 }).join('') + '</div></div>'
             : '') +
         '</div>'
@@ -2480,7 +2529,7 @@ function renderReportDetail(report) {
       ? '<div class="card">' +
           '<div class="card-head card-head-tight"><div class="card-title">' + icon('play') + '下一步这么练</div></div>' +
           '<div class="point-list">' + ai.nextSteps.map(function (s, i) {
-            return '<div class="point-item"><div class="point-mark">' + (i + 1) + '</div><div>' + esc(s) + '</div></div>';
+            return '<div class="point-item"><div class="point-mark">' + (i + 1) + '</div><div>' + mdToHtml(s) + '</div></div>';
           }).join('') + '</div></div>'
       : '') +
 
@@ -2489,7 +2538,7 @@ function renderReportDetail(report) {
           '<div class="row" style="align-items:flex-start;gap:11px">' +
             '<div class="gen-status-icon">' + icon('sparkles') + '</div>' +
             '<div><div class="card-title">' + icon('flame') + '说给你听</div>' +
-            '<p class="ai-summary mt-4" style="font-size:13px">' + esc(ai.encouragement) + '</p></div>' +
+            '<p class="ai-summary mt-4" style="font-size:13px">' + mdToHtml(ai.encouragement) + '</p></div>' +
           '</div></div>'
       : '') +
 
@@ -2569,6 +2618,75 @@ function scheduleProgressSave() {
   }, 700);
 }
 
+/* ---------- 章节标准化：把「学到往事依依」映射成教材标准目录 + 自动补百分比 ---------- */
+const unitNormalizeCache = {};
+const unitNormalizePending = {};
+
+function scheduleUnitNormalize(subject, text, opts) {
+  const raw = String(text || '').trim();
+  if (raw.length < 2) return;
+  if (!isConfigured()) return;
+  const key = subject + '|' + raw;
+  if (unitNormalizeCache[key] || unitNormalizePending[key]) return;
+  unitNormalizePending[key] = true;
+  setTimeout(function () {
+    runUnitNormalize(subject, raw, key, opts || {});
+  }, 700);
+}
+
+function runUnitNormalize(subject, text, key, opts) {
+  startAI({
+    mode: 'outline',
+    messages: [{ role: 'user', content: '我的' + subject + '进度：' + text }],
+    context: { subject: subject, grade: state.profile.grade || '八年级', input: text },
+    options: { deepThinking: false }
+  }, {
+    onDone: function (evt) {
+      delete unitNormalizePending[key];
+      const result = evt && evt.json ? evt.json : null;
+      const entry = state.progress[subject];
+      if (!result || !result.matched || !entry) return;
+      unitNormalizeCache[key] = result;
+      const currentUnit = String(entry.unit || '').trim();
+      // 手动输入场景：内容已被改掉就不覆盖；每日登记场景：已有进度也不覆盖
+      if (opts.fromDaily) {
+        if (currentUnit && currentUnit !== text) return;
+      } else if (currentUnit !== text) {
+        return;
+      }
+      let changed = false;
+      const standard = String(result.standard || '').trim();
+      if (standard && standard !== entry.unit) {
+        entry.unit = standard;
+        changed = true;
+      }
+      const percent = result.percent;
+      if (percent != null && percent > 0 && !(Number(entry.percent) > 0)) {
+        entry.percent = percent;
+        changed = true;
+      }
+      if (!changed) return;
+      entry.updatedAt = Date.now();
+      storeSet('progress', state.progress);
+      // 只更新对应 DOM，不整页重绘，避免打断正在输入的其他科目
+      const unitInput = document.querySelector('[data-bind="progress.unit"][data-subject="' + subject + '"]');
+      if (unitInput && entry.unit) unitInput.value = entry.unit;
+      if (percent != null && percent > 0) {
+        $$('[data-bind="progress.percent"][data-subject="' + subject + '"]').forEach(function (inp) {
+          inp.value = percent;
+        });
+        const label = document.querySelector('[data-percent-label="' + subject + '"]');
+        if (label) label.textContent = percent + '%';
+      }
+      toast(subject + ' 已整理为「' + entry.unit + '」' + (percent > 0 ? ' · 进度 ' + percent + '%' : ''), 'success', 3600);
+      if (state.route === 'home') render();
+    },
+    onError: function () {
+      delete unitNormalizePending[key];
+    }
+  });
+}
+
 function scheduleSettingsSave() {
   if (settingsSaveTimer) clearTimeout(settingsSaveTimer);
   settingsSaveTimer = setTimeout(function () {
@@ -2603,7 +2721,7 @@ function renderProgressCard() {
   return '<div class="card">' +
     '<div class="card-head">' +
       '<div><div class="card-title">' + icon('progress') + '各科进度</div>' +
-      '<div class="card-sub">填单元 / 章节和百分比，AI 出题时会参考</div></div>' +
+      '<div class="card-sub">直接写课文 / 章节名，AI 会自动整理成教材标准目录并估算进度</div></div>' +
       '<span class="field-hint" id="progress-save-hint">修改会自动保存</span>' +
     '</div>' +
     SUBJECTS.map(function (sub) {
@@ -2745,7 +2863,7 @@ function renderMakeupCard() {
               '<div class="makeup-result" data-makeup-result="' + esc(m.id) + '">' +
                 (m.status === 'generating'
                   ? '<span class="row" style="gap:7px"><span class="spinner spinner-sm"></span>正在生成补课安排…</span>'
-                  : esc(m.planText || '还没有生成安排')) +
+                  : mdToHtml(m.planText || '还没有生成安排')) +
               '</div>' +
             '</div>';
           }).join('')
@@ -3055,7 +3173,7 @@ function renderComposer() {
           icon('brain') + '深度思考</button>' +
         '<button class="composer-tool" data-act="upload-material">' + icon('upload') + '上传</button>' +
         '<span class="composer-spacer"></span>' +
-        '<span class="composer-hint"><span class="kbd">Ctrl</span><span class="kbd">Enter</span> 发送</span>' +
+        '<span class="composer-hint"><span class="kbd">Enter</span> 发送 · <span class="kbd">Shift</span>+<span class="kbd">Enter</span> 换行</span>' +
         (chat.streaming
           ? '<button class="composer-send is-stop" data-act="chat-stop" title="停止生成">' + icon('stop') + '</button>'
           : '<button class="composer-send" data-act="chat-send" title="发送"' + (hasContent ? '' : ' disabled') + '>' + icon('send') + '</button>') +
@@ -3118,7 +3236,10 @@ async function sendChat() {
   render();
   scrollChatBottom();
   const inputEl = document.getElementById('chat-input');
-  if (inputEl) inputEl.focus();
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.focus();
+  }
 
   const req = {
     mode: 'chat',
@@ -3669,6 +3790,11 @@ ACTIONS['save-daily'] = async function () {
   if (!ok) return;
   state.dailyDraft = '';
   state.dailyEditing = false;
+  // 每日登记联动进度：文本里提到的科目，自动整理成标准章节并补进度
+  const hitSubjects = SUBJECTS.filter(function (s) { return text.indexOf(s) >= 0; });
+  hitSubjects.slice(0, 2).forEach(function (s) {
+    scheduleUnitNormalize(s, text, { fromDaily: true });
+  });
   toast('记下了，今天辛苦了', 'success');
   render();
 };
@@ -4069,6 +4195,11 @@ ACTIONS['toggle-setting'] = function (el) {
 
 /* AI 助手 */
 ACTIONS['chat-send'] = function () {
+  // 鼠标点发送时先把输入框最新内容同步进 state，避免失焦事件顺序导致草稿丢失或残留
+  const inputEl = document.getElementById('chat-input');
+  if (inputEl && typeof inputEl.value === 'string') {
+    state.chat.draft = inputEl.value;
+  }
   sendChat();
 };
 
@@ -4287,6 +4418,9 @@ function handleBind(el, evt) {
   }
   if (root === 'chat') {
     if (path[0] === 'draft') {
+      // 输入框重绘后旧元素可能延迟触发 change，忽略这类事件，避免发送后草稿又"复活"
+      const current = document.getElementById('chat-input');
+      if (current && el !== current) return;
       state.chat.draft = String(value || '');
       const btn = document.querySelector('.composer-send');
       if (btn && btn.dataset.act === 'chat-send') {
@@ -4313,6 +4447,10 @@ function handleBind(el, evt) {
     } else if (path[0] === 'unit') {
       entry.unit = String(value || '');
       entry.updatedAt = Date.now();
+      // 失焦（change）后自动标准化：口语 → 教材标准目录 + 估算百分比
+      if (evt && evt.type === 'change' && entry.unit.trim()) {
+        scheduleUnitNormalize(subject, entry.unit);
+      }
     } else if (path[0] === 'note') {
       entry.note = String(value || '');
       entry.updatedAt = Date.now();
@@ -4364,15 +4502,16 @@ function onDocumentKeydown(evt) {
     }
     return;
   }
-  if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
+  if (evt.key === 'Enter') {
     const active = document.activeElement;
-    if (!active) return;
-    if (active.id === 'chat-input') {
+    if (active && active.id === 'chat-input') {
+      // Enter 发送；Shift+Enter 换行（中文输入法组字时由 composition 处理，不在这里拦截）
+      if (evt.shiftKey || evt.isComposing) return;
       evt.preventDefault();
       sendChat();
       return;
     }
-    if (state.route === 'quiz' && state.quiz && state.quiz.step === 'answering') {
+    if ((evt.ctrlKey || evt.metaKey) && state.route === 'quiz' && state.quiz && state.quiz.step === 'answering') {
       evt.preventDefault();
       if (state.quiz.index < state.quiz.questions.length - 1) quizNav(1);
       else submitQuiz();

@@ -4755,3 +4755,121 @@ body.view-assistant .view {
   }
 }
 
+
+/* ---------- 数学公式与 AI 富文本 ---------- */
+.q-stem p,
+.answer-stem p,
+.explain-box p,
+.point-item p,
+.ai-summary p,
+.point-desc p,
+.point-evidence p {
+  margin: 0 0 7px;
+}
+
+.q-stem p:last-child,
+.answer-stem p:last-child,
+.explain-box p:last-child,
+.point-item p:last-child,
+.ai-summary p:last-child {
+  margin-bottom: 0;
+}
+
+.q-stem h4,
+.answer-stem h4,
+.explain-box h4,
+.point-item h4 {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 10px 0 5px;
+  color: var(--text);
+}
+
+.q-stem ul,
+.answer-stem ul,
+.explain-box ul,
+.point-item ul {
+  margin: 5px 0 7px;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.q-stem ol,
+.answer-stem ol,
+.explain-box ol,
+.point-item ol {
+  margin: 5px 0 7px;
+  padding-left: 22px;
+  list-style: decimal;
+}
+
+.q-stem blockquote,
+.answer-stem blockquote,
+.explain-box blockquote,
+.point-item blockquote {
+  margin: 6px 0;
+  padding: 4px 10px;
+  border-left: 2px solid var(--border-strong);
+  background: var(--card-2);
+  border-radius: 0 6px 6px 0;
+  color: var(--text-2);
+}
+
+.q-stem pre,
+.answer-stem pre,
+.explain-box pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: var(--panel-deep);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.q-stem code,
+.answer-stem code,
+.explain-box code,
+.point-item code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--card-3);
+}
+
+/* KaTeX 适配暗色主题：颜色继承 + 行内公式不换行 */
+.katex {
+  font-size: 1.05em;
+  color: inherit;
+}
+
+.katex-display {
+  margin: 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.katex-display > .katex {
+  text-align: left;
+}
+
+.q-option-text .katex {
+  font-size: 1.06em;
+}
+
+.q-stem .katex-display {
+  margin: 10px 0;
+}
+
+.math-fallback {
+  color: var(--warning);
+  font-family: var(--font-mono);
+}
+
+.msg-text .katex-display,
+.ai-summary .katex-display {
+  margin: 10px 0;
+}

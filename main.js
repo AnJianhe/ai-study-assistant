@@ -24,8 +24,10 @@ const APP_ROOT = app.getAppPath()
 const ASSETS_DIR = path.join(APP_ROOT, 'assets')
 
 // 固定英文数据目录（%APPDATA%\AIStudyAssistant），避免中文路径在个别环境下的兼容问题
+// 开发/测试可用 STUDY_USERDATA 环境变量指向独立目录，避免和已安装实例抢单实例锁
 try {
-  app.setPath('userData', path.join(app.getPath('appData'), 'AIStudyAssistant'))
+  const customData = process.env.STUDY_USERDATA
+  app.setPath('userData', customData ? String(customData) : path.join(app.getPath('appData'), 'AIStudyAssistant'))
 } catch (err) {
   console.error('[app] 设置数据目录失败，使用默认目录:', err.message)
 }
