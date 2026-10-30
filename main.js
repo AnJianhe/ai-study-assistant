@@ -18,6 +18,7 @@ const { MaterialStore } = require('./lib/materials')
 const { Retriever } = require('./lib/retrieval')
 const { QuizBank } = require('./lib/quizbank')
 const { AiGateway } = require('./lib/ai')
+const { canConvert, convertToMarkdown, legacyHint } = require('./lib/office')
 
 const APP_ROOT = app.getAppPath()
 const ASSETS_DIR = path.join(APP_ROOT, 'assets')
@@ -57,6 +58,7 @@ const gateway = new AiGateway({
   getSettings: () => normalizeSettings(settingsFile.read()),
   getProfile: () => normalizeProfile(profileFile.read()),
   getScores: () => normalizeScores(scoresFile.read()),
+  getProgress: () => kvStore.get('progress') || {},
   retriever,
   materials,
   bank,
@@ -289,11 +291,12 @@ function registerIpc() {
 
   ipcMain.handle('dialog:pickMaterial', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: '选择要上传的材料（图片 / 文本）',
+      title: '选择要上传的材料（图片 / 文本 / Office 文档）',
       properties: ['openFile'],
       filters: [
         { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] },
         { name: '文本', extensions: ['txt', 'md', 'markdown', 'csv', 'json', 'log'] },
+        { name: 'Office 文档（自动转 Markdown）', extensions: ['pptx', 'docx', 'xlsx'] },
         { name: '所有文件', extensions: ['*'] }
       ]
     })
@@ -322,12 +325,22 @@ function registerIpc() {
       if (text.length > 300000) throw new Error('文本超过 30 万字符，请拆分后再上传')
       return { name, ext, size: stat.size, text }
     }
+    if (canConvert(ext)) {
+      try {
+        const text = convertToMarkdown(filePath, name, ext)
+        return { name, ext, size: stat.size, text, converted: true }
+      } catch (err) {
+        throw new Error('自动转换 ' + name + ' 失败：' + (err && err.message ? err.message : String(err)))
+      }
+    }
+    const legacy = legacyHint(ext)
+    if (legacy) throw new Error(legacy)
     return {
       name,
       ext,
       size: stat.size,
       unsupported: true,
-      hint: 'PDF / Word / PPT 暂不支持直接解析：请截图后以图片上传，或复制文本粘贴。'
+      hint: 'PDF 暂不支持直接解析：请截图后以图片上传，或复制文本粘贴。Word/PPT/Excel 请上传 .docx/.pptx/.xlsx 自动转 Markdown。'
     }
   })
 

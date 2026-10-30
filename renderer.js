@@ -750,8 +750,9 @@ function openUploadDialog(options) {
       '</div>' +
       '<div class="banner banner-info">' + icon('info') +
         '<div><div class="banner-title">支持哪些文件？</div>' +
-        '<div class="banner-desc">图片（png / jpg / webp / gif / bmp）、文本（txt / md / csv / json）。' +
-        '<strong>PDF 暂不支持解析</strong>，请先截图再上传。</div></div>' +
+        '<div class="banner-desc">图片（png / jpg / webp / gif / bmp）、文本（txt / md / csv / json）、' +
+        '<strong>Office 文档：.pptx / .docx / .xlsx 会自动转换成 Markdown 文本</strong>后再给 AI 用。' +
+        'PDF 暂不支持解析，请先截图再上传。旧版 .ppt / .doc / .xls 请另存为新格式。</div></div>' +
       '</div>' +
       '<div class="upload-drop" data-act="upload-pick">' +
         '<div class="upload-drop-icon">' + icon('upload') + '</div>' +
@@ -4186,9 +4187,9 @@ async function pickAndAddMaterial() {
     toast('PDF 暂不支持解析，请截图后再上传', 'warning', 5200);
     return;
   }
-  const supported = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'txt', 'md', 'csv', 'json'];
+  const supported = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'txt', 'md', 'csv', 'json', 'pptx', 'docx', 'xlsx'];
   if (ext && supported.indexOf(ext) === -1) {
-    toast('暂不支持 .' + ext + ' 格式，请上传图片或文本文件', 'warning', 5200);
+    toast('暂不支持 .' + ext + ' 格式：请上传图片、文本，或 .pptx / .docx / .xlsx（会自动转 Markdown）', 'warning', 5600);
     return;
   }
   try {
@@ -4200,7 +4201,11 @@ async function pickAndAddMaterial() {
       text: file.text,
       ext: ext
     });
-    toast('已上传：' + (mat && mat.name ? mat.name : file.name), 'success');
+    if (file.converted) {
+      toast('已把 ' + ext.toUpperCase() + ' 自动转成 Markdown（' + String(file.text || '').length + ' 字）并加入资料库', 'success', 5200);
+    } else {
+      toast('已上传：' + (mat && mat.name ? mat.name : file.name), 'success');
+    }
     await refreshMaterials();
     closeModal();
     const cb = pick.onDone;
@@ -4424,7 +4429,14 @@ async function generateMakeupPlan(makeupId) {
     context: {
       subject: item.subject,
       grade: grade,
-      useTextbooks: true
+      useTextbooks: true,
+      plan: {
+        scene: '请假 / 缺课后的补课',
+        subject: item.subject,
+        missing: item.content,
+        available: state.settings && state.settings.learning ? String(state.settings.learning.dailyMinutes || 40) + ' 分钟/天' : '',
+        notes: item.note || ''
+      }
     },
     options: { deepThinking: false, webSearch: true }
   };
