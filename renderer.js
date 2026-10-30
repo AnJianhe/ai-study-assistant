@@ -685,7 +685,8 @@ async function loadAll() {
     safeCall(function () { return api.store.get('makeups'); }, []),
     safeCall(function () { return api.store.get('welcomed'); }, false),
     safeCall(function () { return api.app.info(); }, null),
-    safeCall(function () { return api.store.get('uiTheme'); }, null)
+    safeCall(function () { return api.store.get('uiTheme'); }, null),
+    safeCall(function () { return api.store.get('chatHistory'); }, [])
   ]);
   state.settings = mergeSettings(results[0]);
   state.profile = mergeProfile(results[1]);
@@ -700,6 +701,24 @@ async function loadAll() {
   state.makeups = Array.isArray(results[10]) ? results[10] : [];
   state.welcomed = !!results[11];
   state.appInfo = results[12];
+  // 恢复 AI 助手对话记录（只恢复文本，不恢复图片附件，最多 40 条）
+  state.chat.messages = Array.isArray(results[14])
+    ? results[14]
+        .filter(function (m) { return m && (m.role === 'user' || m.role === 'assistant'); })
+        .slice(-40)
+        .map(function (m) {
+          return {
+            id: m.id || uid('m'),
+            role: m.role,
+            content: String(m.content || ''),
+            reasoning: String(m.reasoning || ''),
+            search: m.search || null,
+            images: [],
+            createdAt: Number(m.createdAt) || Date.now(),
+            status: 'done'
+          };
+        })
+    : [];
   // 主题由前端自己记住（默认暗色）。浅色仅作为可选主题。
   const storedTheme = results[13] === 'light' ? 'light' : 'dark';
   state.themePreference = storedTheme;
@@ -714,6 +733,26 @@ function applyTheme(theme) {
   const t = theme === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', t);
   if (state.settings && state.settings.ui) state.settings.ui.theme = t;
+}
+
+// 持久化 AI 助手对话记录（文本 + 引用来源，最多 40 条；图片附件不落盘以控制体积）
+function saveChatHistory() {
+  try {
+    const messages = (state.chat.messages || []).slice(-40).map(function (m) {
+      return {
+        id: m.id,
+        role: m.role,
+        content: m.content || '',
+        reasoning: m.reasoning || '',
+        search: m.search || null,
+        createdAt: m.createdAt || Date.now(),
+        status: m.status === 'streaming' ? 'done' : m.status || 'done'
+      };
+    });
+    storeSet('chatHistory', messages);
+  } catch (err) {
+    console.warn('[chat history] 保存失败', err && err.message ? err.message : err);
+  }
 }
 
 async function saveSettingsPatch(patch, silent) {
@@ -968,11 +1007,13 @@ function dispatchAIEvent(evt) {
   if (evt.type === 'done') {
     state.aiJobs.delete(evt.requestId);
     if (job.onDone) job.onDone(evt, job);
+    if (job.mode === 'chat') saveChatHistory();
     return;
   }
   if (evt.type === 'error') {
     state.aiJobs.delete(evt.requestId);
     if (job.onError) job.onError(evt, job);
+    if (job.mode === 'chat') saveChatHistory();
     return;
   }
   if (evt.type === 'start') {
@@ -3281,6 +3322,7 @@ async function sendChat() {
   chat.draft = '';
   chat.images = [];
   chat.streaming = true;
+  saveChatHistory();
   render();
   scrollChatBottom();
   const inputEl = document.getElementById('chat-input');
@@ -4268,6 +4310,7 @@ ACTIONS['chat-clear'] = async function () {
   state.chat.streaming = false;
   state.chat.requestId = null;
   state.chat.images = [];
+  saveChatHistory();
   render();
 };
 
