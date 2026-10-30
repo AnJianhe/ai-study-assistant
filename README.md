@@ -130,7 +130,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-installer.ps1
 
 ## 八、已知限制
 
-- 上传 PDF/Word/PPT 不做解析，请截图成图片上传（选择文件时会提示）。
+- 上传 PDF/老版 Office 不做解析：PDF 请截图成图片上传；`.ppt/.doc/.xls` 请另存为 `.pptx/.docx/.xlsx`（新版 Office 会上传时自动转成 Markdown 文本）。
 - 图片会随请求发送给多模态模型，普通文本模型可能忽略图片；建议使用支持视觉的模型。
 - 联网搜索兜底使用 Bing 网页检索，结果质量受网络环境影响；配置 Tavily/Serper/博查可获得更稳定的结果。
 - 报告中的「自动判分」对填空/简答采用要点匹配，可能与老师人工批改略有差异，以老师批改为准。
