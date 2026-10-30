@@ -1,0 +1,128 @@
+[
+  {
+    "id": "yuwen-g7",
+    "subject": "语文",
+    "grade": "七年级",
+    "version": "人教版",
+    "title": "人教版语文七年级 核心知识梳理",
+    "file": "yuwen-g7.md",
+    "order": 1
+  },
+  {
+    "id": "yuwen-g8",
+    "subject": "语文",
+    "grade": "八年级",
+    "version": "人教版",
+    "title": "人教版语文八年级 核心知识梳理",
+    "file": "yuwen-g8.md",
+    "order": 2
+  },
+  {
+    "id": "shuxue-g7",
+    "subject": "数学",
+    "grade": "七年级",
+    "version": "浙教版",
+    "title": "浙教版数学七年级 核心知识梳理",
+    "file": "shuxue-g7.md",
+    "order": 3
+  },
+  {
+    "id": "shuxue-g8",
+    "subject": "数学",
+    "grade": "八年级",
+    "version": "浙教版",
+    "title": "浙教版数学八年级 核心知识梳理",
+    "file": "shuxue-g8.md",
+    "order": 4
+  },
+  {
+    "id": "yingyu-g7",
+    "subject": "英语",
+    "grade": "七年级",
+    "version": "人教版",
+    "title": "人教版英语七年级 核心知识梳理",
+    "file": "yingyu-g7.md",
+    "order": 5
+  },
+  {
+    "id": "yingyu-g8",
+    "subject": "英语",
+    "grade": "八年级",
+    "version": "人教版",
+    "title": "人教版英语八年级 核心知识梳理",
+    "file": "yingyu-g8.md",
+    "order": 6
+  },
+  {
+    "id": "kexue-g7",
+    "subject": "科学",
+    "grade": "七年级",
+    "version": "教科版",
+    "title": "浙教版/教科版科学七年级 核心知识梳理",
+    "file": "kexue-g7.md",
+    "order": 7
+  },
+  {
+    "id": "kexue-g8",
+    "subject": "科学",
+    "grade": "八年级",
+    "version": "教科版",
+    "title": "浙教版/教科版科学八年级 核心知识梳理",
+    "file": "kexue-g8.md",
+    "order": 8
+  },
+  {
+    "id": "daofa-g7",
+    "subject": "道法",
+    "grade": "七年级",
+    "version": "人教版",
+    "title": "人教版道德与法治七年级 核心知识梳理",
+    "file": "daofa-g7.md",
+    "order": 9
+  },
+  {
+    "id": "daofa-g8",
+    "subject": "道法",
+    "grade": "八年级",
+    "version": "人教版",
+    "title": "人教版道德与法治八年级 核心知识梳理",
+    "file": "daofa-g8.md",
+    "order": 10
+  },
+  {
+    "id": "lishi-g7",
+    "subject": "历史",
+    "grade": "七年级",
+    "version": "人教版",
+    "title": "人教版历史七年级 核心知识梳理",
+    "file": "lishi-g7.md",
+    "order": 11
+  },
+  {
+    "id": "lishi-g8",
+    "subject": "历史",
+    "grade": "八年级",
+    "version": "人教版",
+    "title": "人教版历史八年级 核心知识梳理",
+    "file": "lishi-g8.md",
+    "order": 12
+  },
+  {
+    "id": "dili-g7",
+    "subject": "地理",
+    "grade": "七年级",
+    "version": "人教版",
+    "title": "人教版地理七年级 核心知识梳理",
+    "file": "dili-g7.md",
+    "order": 13
+  },
+  {
+    "id": "dili-g8",
+    "subject": "地理",
+    "grade": "八年级",
+    "version": "人教版",
+    "title": "人教版地理八年级 核心知识梳理",
+    "file": "dili-g8.md",
+    "order": 14
+  }
+]
