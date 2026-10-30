@@ -2,7 +2,31 @@
 // 安全桥梁：渲染进程只能通过 window.api 访问主进程能力，API Key 永不出主进程。
 const { contextBridge, ipcRenderer } = require('electron')
 
-const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args)
+const invoke = (channel, ...args) => {
+  // IPC 参数必须是可结构化克隆的纯数据：统一做一次 JSON 深拷贝，
+  // 避免 Proxy / 函数 / DOM 引用等导致 "An object could not be cloned."
+  const safeArgs = args.map((arg) => {
+    if (arg === undefined || arg === null || typeof arg !== 'object') return arg
+    try {
+      return JSON.parse(JSON.stringify(arg))
+    } catch (err) {
+      return arg
+    }
+  })
+  try {
+    return ipcRenderer.invoke(channel, ...safeArgs)
+  } catch (err) {
+    try {
+      ipcRenderer.send('client:error', {
+        channel: channel,
+        message: String((err && err.message) || err)
+      })
+    } catch (_ignore) {
+      /* 上报失败不影响原错误抛出 */
+    }
+    throw err
+  }
+}
 
 const api = {
   app: {

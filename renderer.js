@@ -107,7 +107,7 @@ const DEFAULT_SETTINGS = {
     model: 'deepseek-chat',
     reasoningModel: '',
     temperature: 0.3,
-    maxTokens: 2048,
+    maxTokens: 0,
     timeoutSec: 120
   },
   ai: { stream: true, deepThinking: false, webSearch: true, searchProvider: 'auto' },
@@ -416,6 +416,21 @@ function mdToHtml(src) {
     if (/^\u0000\d+\u0000$/.test(p)) return p;
     if (/^<(h4|blockquote|pre|ul|ol)/.test(p)) return p;
     const lines = p.split('\n');
+    // Markdown 表格：| a | b | 加 | --- | --- |
+    if (lines.length >= 2 && /^\s*\|/.test(lines[0]) && /^\s*\|?[\s:|-]+\|/.test(lines[1])) {
+      const parseCells = function (line) {
+        return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (c) { return c.trim(); });
+      };
+      const head = parseCells(lines[0]);
+      const rows = lines.slice(2).filter(function (l) { return l.trim(); }).map(parseCells);
+      return '<table class="md-table"><thead><tr>' +
+        head.map(function (c) { return '<th>' + c + '</th>'; }).join('') +
+        '</tr></thead><tbody>' +
+        rows.map(function (row) {
+          return '<tr>' + row.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+        }).join('') +
+        '</tbody></table>';
+    }
     const isUl = lines.every(function (l) { return !l.trim() || /^[-*•]\s+/.test(l); }) && lines.some(function (l) { return /^[-*•]\s+/.test(l); });
     if (isUl) {
       return '<ul>' + lines.filter(function (l) { return l.trim(); }).map(function (l) {
@@ -2622,69 +2637,102 @@ function scheduleProgressSave() {
 const unitNormalizeCache = {};
 const unitNormalizePending = {};
 
+const unitNormalizeQueue = [];
+let unitNormalizeRunning = false;
+
 function scheduleUnitNormalize(subject, text, opts) {
   const raw = String(text || '').trim();
   if (raw.length < 2) return;
   if (!isConfigured()) return;
   const key = subject + '|' + raw;
   if (unitNormalizeCache[key] || unitNormalizePending[key]) return;
+  if (unitNormalizeQueue.some(function (item) { return item.key === key; })) return;
   unitNormalizePending[key] = true;
-  setTimeout(function () {
-    runUnitNormalize(subject, raw, key, opts || {});
-  }, 700);
+  unitNormalizeQueue.push({ subject: subject, text: raw, key: key, opts: opts || {} });
+  setTimeout(drainUnitNormalizeQueue, 500);
+}
+
+function finishUnitNormalize(key) {
+  delete unitNormalizePending[key];
+  unitNormalizeRunning = false;
+  if (unitNormalizeQueue.length) setTimeout(drainUnitNormalizeQueue, 150);
+}
+
+function drainUnitNormalizeQueue() {
+  if (unitNormalizeRunning) return;
+  const item = unitNormalizeQueue.shift();
+  if (!item) return;
+  unitNormalizeRunning = true;
+  runUnitNormalize(item.subject, item.text, item.key, item.opts);
 }
 
 function runUnitNormalize(subject, text, key, opts) {
-  startAI({
-    mode: 'outline',
-    messages: [{ role: 'user', content: '我的' + subject + '进度：' + text }],
-    context: { subject: subject, grade: state.profile.grade || '八年级', input: text },
-    options: { deepThinking: false }
-  }, {
-    onDone: function (evt) {
-      delete unitNormalizePending[key];
-      const result = evt && evt.json ? evt.json : null;
-      const entry = state.progress[subject];
-      if (!result || !result.matched || !entry) return;
-      unitNormalizeCache[key] = result;
-      const currentUnit = String(entry.unit || '').trim();
-      // 手动输入场景：内容已被改掉就不覆盖；每日登记场景：已有进度也不覆盖
-      if (opts.fromDaily) {
-        if (currentUnit && currentUnit !== text) return;
-      } else if (currentUnit !== text) {
-        return;
+  // 串行执行：一次只跑一个标准化请求，避免多科同时失焦时结果错乱 / 请求互相覆盖
+  let settled = false;
+  const finish = function () {
+    if (settled) return;
+    settled = true;
+    finishUnitNormalize(key);
+  };
+  try {
+    startAI({
+      mode: 'outline',
+      messages: [{ role: 'user', content: '我的' + subject + '进度：' + text }],
+      context: { subject: subject, grade: state.profile.grade || '八年级', input: text },
+      options: { deepThinking: false }
+    }, {
+      onDone: function (evt) {
+        try {
+          const result = evt && evt.json ? evt.json : null;
+          const entry = state.progress[subject];
+          if (!result || !result.matched || !entry) return;
+          unitNormalizeCache[key] = result;
+          const currentUnit = String(entry.unit || '').trim();
+          // 手动输入场景：内容已被改掉就不覆盖；每日登记场景：已有进度也不覆盖
+          if (opts.fromDaily) {
+            if (currentUnit && currentUnit !== text) return;
+          } else if (currentUnit !== text) {
+            return;
+          }
+          let changed = false;
+          const standard = String(result.standard || '').trim();
+          if (standard && standard !== entry.unit) {
+            entry.unit = standard;
+            changed = true;
+          }
+          const percent = result.percent;
+          if (percent != null && percent > 0 && !(Number(entry.percent) > 0)) {
+            entry.percent = percent;
+            changed = true;
+          }
+          if (!changed) return;
+          entry.updatedAt = Date.now();
+          storeSet('progress', state.progress);
+          // 只更新对应 DOM，不整页重绘，避免打断正在输入的其他科目
+          const unitInput = document.querySelector('[data-bind="progress.unit"][data-subject="' + subject + '"]');
+          if (unitInput && entry.unit) unitInput.value = entry.unit;
+          if (percent != null && percent > 0) {
+            $$('[data-bind="progress.percent"][data-subject="' + subject + '"]').forEach(function (inp) {
+              inp.value = percent;
+            });
+            const label = document.querySelector('[data-percent-label="' + subject + '"]');
+            if (label) label.textContent = percent + '%';
+          }
+          toast(subject + ' 已整理为「' + entry.unit + '」' + (percent > 0 ? ' · 进度 ' + percent + '%' : ''), 'success', 3600);
+          if (state.route === 'home') render();
+        } finally {
+          finish();
+        }
+      },
+      onError: function () {
+        finish();
       }
-      let changed = false;
-      const standard = String(result.standard || '').trim();
-      if (standard && standard !== entry.unit) {
-        entry.unit = standard;
-        changed = true;
-      }
-      const percent = result.percent;
-      if (percent != null && percent > 0 && !(Number(entry.percent) > 0)) {
-        entry.percent = percent;
-        changed = true;
-      }
-      if (!changed) return;
-      entry.updatedAt = Date.now();
-      storeSet('progress', state.progress);
-      // 只更新对应 DOM，不整页重绘，避免打断正在输入的其他科目
-      const unitInput = document.querySelector('[data-bind="progress.unit"][data-subject="' + subject + '"]');
-      if (unitInput && entry.unit) unitInput.value = entry.unit;
-      if (percent != null && percent > 0) {
-        $$('[data-bind="progress.percent"][data-subject="' + subject + '"]').forEach(function (inp) {
-          inp.value = percent;
-        });
-        const label = document.querySelector('[data-percent-label="' + subject + '"]');
-        if (label) label.textContent = percent + '%';
-      }
-      toast(subject + ' 已整理为「' + entry.unit + '」' + (percent > 0 ? ' · 进度 ' + percent + '%' : ''), 'success', 3600);
-      if (state.route === 'home') render();
-    },
-    onError: function () {
-      delete unitNormalizePending[key];
-    }
-  });
+    }).catch(function () {
+      finish();
+    });
+  } catch (err) {
+    finish();
+  }
 }
 
 function scheduleSettingsSave() {
@@ -3439,8 +3487,8 @@ function renderSettingsApi(draft) {
         '<input class="input" type="number" step="0.1" min="0" max="2" data-bind="settings.api.temperature" data-type="number" value="' + esc(apiCfg.temperature) + '">' +
         '<span class="field-hint">越低越稳定，出题建议 0.3 左右</span></div>' +
       '<div class="field"><label class="field-label">' + icon('layers') + '最大 token</label>' +
-        '<input class="input" type="number" min="256" step="256" data-bind="settings.api.maxTokens" data-type="number" value="' + esc(apiCfg.maxTokens) + '">' +
-        '<span class="field-hint">长回答不够用就调大</span></div>' +
+        '<input class="input" type="number" min="0" step="256" data-bind="settings.api.maxTokens" data-type="number" value="' + esc(apiCfg.maxTokens) + '" placeholder="0 = 不限制">' +
+        '<span class="field-hint">0 = 不限制（不传该参数，长回答不会被截断）</span></div>' +
       '<div class="field"><label class="field-label">' + icon('clock') + '超时（秒）</label>' +
         '<input class="input" type="number" min="20" max="600" data-bind="settings.api.timeoutSec" data-type="number" value="' + esc(apiCfg.timeoutSec) + '">' +
         '<span class="field-hint">网络慢可以调到 180</span></div>' +
