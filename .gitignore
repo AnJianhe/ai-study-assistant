@@ -17,3 +17,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+scripts/out-*.png
+app-window*.png
