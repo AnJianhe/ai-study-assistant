@@ -4873,3 +4873,36 @@ body.view-assistant .view {
 .ai-summary .katex-display {
   margin: 10px 0;
 }
+
+/* Markdown 表格（AI 输出的补课/报告表格） */
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.md-table th,
+.md-table td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-table th {
+  background: var(--card-3);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.md-table td {
+  color: var(--text-2);
+}
+
+.md-table tr:nth-child(even) td {
+  background: var(--card-2);
+}

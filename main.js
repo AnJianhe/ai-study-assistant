@@ -204,8 +204,12 @@ function applyContentSecurityPolicy() {
 }
 
 function registerIpc() {
-  ipcMain.handle('app:info', () => ({
-    version: app.getVersion(),
+  // 渲染进程 IPC 参数序列化失败时上报，便于定位 "An object could not be cloned."
+  ipcMain.on('client:error', (_event, payload) => {
+    logDebug('[client:error]', JSON.stringify(payload))
+  })
+
+  ipcMain.handle('app:info', () => ({    version: app.getVersion(),
     userDataPath: app.getPath('userData'),
     dataPath: DATA_DIR,
     packaged: app.isPackaged,
