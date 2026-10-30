@@ -1,0 +1,1066 @@
+[
+  {
+    "id": "yuwen-001",
+    "subject": "语文",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "《〈论语〉十二章》中“学而不思则罔，思而不学则殆”的“罔”意思是：",
+    "options": [
+      "A. 迷惑，意思是感到迷茫而无所适从",
+      "B. 欺骗、蒙蔽",
+      "C. 荒废、丢弃",
+      "D. 详尽、完备"
+    ],
+    "answer": "A",
+    "explanation": "“罔”通“惘”，意为迷惑，指只读书而不思考就会感到迷茫而无所适从，正好与下句“殆”（疑惑）形成对照。B、C、D 都是现代汉语的常见义，不能用来解释这个文言实词。",
+    "knowledgePoint": "《论语》十二章·文言实词",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yuwen-002",
+    "subject": "语文",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列句子中，所用修辞手法与其他三项不同的一项是：",
+    "options": [
+      "A. 红的像火，粉的像霞，白的像雪。",
+      "B. 春天像刚落地的娃娃。",
+      "C. 桃树、杏树、梨树，你不让我，我不让你，都开满了花赶趟儿。",
+      "D. 像牛毛，像花针，像细丝。"
+    ],
+    "answer": "C",
+    "explanation": "A、B、D 都含“像”，把甲物比作乙物，是比喻；C 把树当作人来写，“你不让我，我不让你”赋予树以人的动作和情态，是拟人。判断修辞要抓“有没有本体和喻体”，而不是只看有没有“像”字。",
+    "knowledgePoint": "修辞手法·比喻与拟人的辨析",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yuwen-003",
+    "subject": "语文",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列文学常识表述有误的一项是：",
+    "options": [
+      "A. 《从百草园到三味书屋》选自鲁迅的散文集《朝花夕拾》。",
+      "B. 《世说新语》是南朝宋刘义庆组织编写的一部志人小说集。",
+      "C. 《诫子书》的作者诸葛亮是三国时期蜀汉的政治家、军事家。",
+      "D. 《天净沙·秋思》的作者马致远是唐代著名诗人。"
+    ],
+    "answer": "D",
+    "explanation": "马致远是元代著名散曲家，与关汉卿、白朴、郑光祖并称“元曲四大家”，不是唐代诗人。《天净沙·秋思》是元曲中的小令，被誉为“秋思之祖”。A、B、C 三项表述均正确。",
+    "knowledgePoint": "文学常识·作家作品与朝代",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yuwen-004",
+    "subject": "语文",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "《〈论语〉十二章》中，与“三人行，必有我师焉”相连的下句是“____，其不善者而改之”。",
+    "answer": "择其善者而从之",
+    "explanation": "原句为“三人行，必有我师焉。择其善者而从之，其不善者而改之”。“择其善者而从之”的意思是选择他们的优点来学习。默写时注意“择”不要写成“释”，“善”不要写成“擅”。",
+    "knowledgePoint": "《论语》十二章·名句默写",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yuwen-005",
+    "subject": "语文",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "《天净沙·秋思》中直抒胸臆、点明主旨的句子是“夕阳西下，____”。",
+    "answer": "断肠人在天涯",
+    "explanation": "全曲以“枯藤老树昏鸦”等意象铺陈萧瑟秋景，末句“夕阳西下，断肠人在天涯”由景入情，直接点出天涯游子的思乡愁苦，是全曲的主旨句。默写注意“涯”是三点水，不要写成“崖”。",
+    "knowledgePoint": "古诗词·主旨句与情感",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yuwen-006",
+    "subject": "语文",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "《三峡》中“自非亭午夜分，不见曦月”的“曦”是什么意思？",
+    "options": [
+      "A. 晨曦，指清晨的雾气",
+      "B. 日光，这里指太阳",
+      "C. 云霞",
+      "D. 月光"
+    ],
+    "answer": "B",
+    "explanation": "“曦”本义是日光，这里借指太阳。全句意思是：如果不是正午，就看不见太阳；如果不是半夜，就看不见月亮。作者用“亭午夜分”才见日月，侧面写出三峡两岸山高岭连、遮天蔽日的特点。",
+    "knowledgePoint": "《三峡》·文言实词与侧面描写",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yuwen-007",
+    "subject": "语文",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "《记承天寺夜游》中“庭下如积水空明，水中藻、荇交横，盖竹柏影也”主要运用了什么修辞手法？",
+    "options": [
+      "A. 比喻",
+      "B. 拟人",
+      "C. 夸张",
+      "D. 排比"
+    ],
+    "answer": "A",
+    "explanation": "作者把洒满庭院的月光比作清澈透明的积水，把竹柏的影子比作水中交错的藻、荇，是典型的比喻（暗喻）。这个比喻不写“月”字却处处写月，写出月光的空灵澄澈，也透出作者闲适而又略带怅惘的心境。",
+    "knowledgePoint": "《记承天寺夜游》·比喻与景物描写",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yuwen-008",
+    "subject": "语文",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "《苏州园林》中“苏州园林据说有一百多处，我到过的不过十多处”一句里的“据说”能否删去？",
+    "options": [
+      "A. 能删去，删去后意思更明确",
+      "B. 不能删去，“据说”表明数字来源不确定，体现说明文语言的准确性",
+      "C. 能删去，因为一百多处这个数字本来就不准确",
+      "D. 不能删去，因为“据说”是形容词，删去后句子不通"
+    ],
+    "answer": "B",
+    "explanation": "“据说”表示消息来源不确定，说明“一百多处”并非作者亲自核实；删去后就成了确定事实，与实际情况不符。说明文语言讲究准确严密，这类限定词往往不能删，答题要说清“删去后变成什么、为什么不符”。",
+    "knowledgePoint": "说明文·语言准确性",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yuwen-009",
+    "subject": "语文",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "朱自清《背影》中“背影”在文中多次出现，其主要作用是：",
+    "options": [
+      "A. 细致描写父亲的衣着打扮",
+      "B. 作为全文的线索，凝聚父子深情",
+      "C. 说明父亲身体不好，需要照顾",
+      "D. 交代故事发生的地点"
+    ],
+    "answer": "B",
+    "explanation": "《背影》以“背影”为线索，开篇点题、车站买橘、惜别、结尾读信四处写背影，情感层层推进。背影是父爱的集中体现，也是“我”情感的触发点，所以它既是结构线索，又是情感凝聚点。",
+    "knowledgePoint": "散文·线索与情感",
+    "difficulty": "hard"
+  },
+  {
+    "id": "yuwen-010",
+    "subject": "语文",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "《桃花源记》的作者陶渊明是____（朝代）著名诗人。",
+    "answer": "东晋",
+    "explanation": "陶渊明是东晋（一说东晋末至南朝宋初）著名诗人，号五柳先生，是我国第一位田园诗人。《桃花源记》借渔人误入桃花源的故事，寄托了对没有战乱、和平安乐生活的向往。",
+    "knowledgePoint": "文学常识·陶渊明与《桃花源记》",
+    "difficulty": "medium"
+  },
+  {
+    "id": "shuxue-001",
+    "subject": "数学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "计算 -2² 的结果是：",
+    "options": [
+      "A. 4",
+      "B. -4",
+      "C. 2",
+      "D. -2"
+    ],
+    "answer": "B",
+    "explanation": "-2² 表示 2 的平方的相反数，先算乘方 2²=4，再取相反数得 -4。注意与 (-2)² 区分：(-2)² 表示 -2 的平方，结果是 4。这是有理数运算最常见的陷阱。",
+    "knowledgePoint": "有理数的乘方",
+    "difficulty": "easy"
+  },
+  {
+    "id": "shuxue-002",
+    "subject": "数学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列运算正确的是：",
+    "options": [
+      "A. a²·a³=a⁶",
+      "B. (a²)³=a⁵",
+      "C. a⁸÷a²=a⁴",
+      "D. (ab)²=a²b²"
+    ],
+    "answer": "D",
+    "explanation": "A 错：同底数幂相乘，指数相加，应为 a⁵；B 错：幂的乘方，指数相乘，应为 a⁶；C 错：同底数幂相除，指数相减，应为 a⁶；D 正确：积的乘方等于把积的每一个因式分别乘方，即 (ab)²=a²b²。",
+    "knowledgePoint": "整式的乘除·幂的运算",
+    "difficulty": "easy"
+  },
+  {
+    "id": "shuxue-003",
+    "subject": "数学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "用科学记数法表示 2.5 万，正确的是：",
+    "options": [
+      "A. 2.5×10³",
+      "B. 2.5×10⁴",
+      "C. 25×10³",
+      "D. 2.5×10⁵"
+    ],
+    "answer": "B",
+    "explanation": "2.5 万=25000=2.5×10⁴。科学记数法要求写成 a×10ⁿ，其中 1≤|a|<10，所以 C 的 25×10³ 虽然数值相等，但不符合规范形式。",
+    "knowledgePoint": "科学记数法",
+    "difficulty": "medium"
+  },
+  {
+    "id": "shuxue-004",
+    "subject": "数学",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "若 |x|=3，则 x=____。",
+    "answer": "±3",
+    "explanation": "绝对值表示数轴上到原点的距离，距离为 3 的点有两个：3 和 -3，所以 x=±3。只写 3 是常见失分，绝对值方程一般有两解。",
+    "knowledgePoint": "绝对值",
+    "difficulty": "easy"
+  },
+  {
+    "id": "shuxue-005",
+    "subject": "数学",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "解方程 2x-5=3x+1，得 x=____。",
+    "answer": "-6",
+    "explanation": "移项：2x-3x=1+5，注意移项要变号；合并同类项得 -x=6；两边同除以 -1 得 x=-6。也可以把含 x 的项移到一边、常数移到另一边，但要保证每一步都变号正确。",
+    "knowledgePoint": "一元一次方程的解法",
+    "difficulty": "medium"
+  },
+  {
+    "id": "shuxue-006",
+    "subject": "数学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "一次函数 y=-2x+3 的图象不经过：",
+    "options": [
+      "A. 第一象限",
+      "B. 第二象限",
+      "C. 第三象限",
+      "D. 第四象限"
+    ],
+    "answer": "C",
+    "explanation": "k=-2<0，直线从左向右下降；b=3>0，直线与 y 轴交于正半轴，所以图象经过第一、二、四象限，不经过第三象限。判断口诀：k 决定升降，b 决定与 y 轴交点位置。",
+    "knowledgePoint": "一次函数的图象与性质",
+    "difficulty": "easy"
+  },
+  {
+    "id": "shuxue-007",
+    "subject": "数学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "在 Rt△ABC 中，∠C=90°，AC=3，BC=4，则斜边 AB 的长为：",
+    "options": [
+      "A. 5",
+      "B. 6",
+      "C. 7",
+      "D. √7"
+    ],
+    "answer": "A",
+    "explanation": "∠C=90°，所以 AB 是斜边。由勾股定理 AB=√(AC²+BC²)=√(3²+4²)=√25=5。做题时先确认哪条边是斜边（直角所对的边），不要把直角边误当斜边代入。",
+    "knowledgePoint": "勾股定理",
+    "difficulty": "medium"
+  },
+  {
+    "id": "shuxue-008",
+    "subject": "数学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "一元二次方程 x²-2x-3=0 的两根之积是：",
+    "options": [
+      "A. 2",
+      "B. -3",
+      "C. 3",
+      "D. -2"
+    ],
+    "answer": "B",
+    "explanation": "由根与系数的关系 x₁x₂=c/a，这里 a=1、c=-3，所以 x₁x₂=-3。两根之和则是 -b/a=2。也可先因式分解得 (x-3)(x+1)=0，两根为 3 和 -1，乘积为 -3，可验证。",
+    "knowledgePoint": "一元二次方程·根与系数的关系",
+    "difficulty": "medium"
+  },
+  {
+    "id": "shuxue-009",
+    "subject": "数学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "下列条件中，能判定四边形 ABCD 是平行四边形的是：",
+    "options": [
+      "A. AB∥CD，AD=BC",
+      "B. AB=CD，AD=BC",
+      "C. ∠A=∠B，∠C=∠D",
+      "D. AB∥CD，∠A=∠B"
+    ],
+    "answer": "B",
+    "explanation": "两组对边分别相等的四边形是平行四边形，B 符合。A 中“一组对边平行、另一组对边相等”可能是等腰梯形，不能判定；C 中∠A=∠B、∠C=∠D 的四边形也可能是等腰梯形；D 的条件同样不充分。",
+    "knowledgePoint": "平行四边形的判定",
+    "difficulty": "hard"
+  },
+  {
+    "id": "shuxue-010",
+    "subject": "数学",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "若关于 x 的一元二次方程 x²-4x+m=0 有两个相等的实数根，则 m=____。",
+    "answer": "4",
+    "explanation": "有两个相等的实数根，说明判别式 Δ=b²-4ac=0。这里 a=1、b=-4、c=m，所以 Δ=16-4m=0，解得 m=4。Δ>0 时有两个不相等的实数根，Δ<0 时没有实数根。",
+    "knowledgePoint": "一元二次方程·根的判别式",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yingyu-001",
+    "subject": "英语",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "— What ___ your sister ___ now? — She is reading a book.",
+    "options": [
+      "A. is; doing",
+      "B. does; do",
+      "C. is; do",
+      "D. does; doing"
+    ],
+    "answer": "A",
+    "explanation": "句中有 now，表示此刻正在进行的动作，要用现在进行时 be + 动词 -ing。主语 your sister 是第三人称单数，be 动词用 is，动词 do 变为 doing，所以选 A。B 是一般现在时，C、D 结构本身有误。",
+    "knowledgePoint": "现在进行时",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yingyu-002",
+    "subject": "英语",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "My father often ___ to work by bus.",
+    "options": [
+      "A. go",
+      "B. goes",
+      "C. going",
+      "D. went"
+    ],
+    "answer": "B",
+    "explanation": "often 表示经常性动作，用一般现在时；主语 My father 是第三人称单数，动词要加 -es（go 以 o 结尾，加 -es），所以用 goes。A 是原形（主语为复数或第一、二人称时用），C 不是谓语形式，D 是过去式。",
+    "knowledgePoint": "一般现在时·第三人称单数",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yingyu-003",
+    "subject": "英语",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "There ___ a book and two pens on the desk.",
+    "options": [
+      "A. is",
+      "B. are",
+      "C. have",
+      "D. has"
+    ],
+    "answer": "A",
+    "explanation": "there be 句型表示“某地有某物”，be 动词的单复数遵循就近原则：靠近 be 动词的是 a book（单数），所以用 is，尽管后面还有 two pens。C、D 的 have/has 表示“拥有”，主语一般是人，不能用于 there be 句型。",
+    "knowledgePoint": "there be 句型与就近原则",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yingyu-004",
+    "subject": "英语",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "用所给词的适当形式填空：My sister ___ (like) music very much.",
+    "answer": "likes",
+    "explanation": "主语 My sister 是第三人称单数，句子陈述的是习惯性喜好，用一般现在时，动词 like 要加 -s 变为 likes。注意：若句中有助动词 does 构成否定或疑问，动词则还原为原形。",
+    "knowledgePoint": "一般现在时·第三人称单数",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yingyu-005",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "I ___ my homework when my mother came home.",
+    "options": [
+      "A. do",
+      "B. did",
+      "C. was doing",
+      "D. am doing"
+    ],
+    "answer": "C",
+    "explanation": "when 从句用一般过去时 came home，表示过去某一时刻；主句表示那时正在进行的动作，用过去进行时 was/were + doing。主语 I 用 was。B 是一般过去时，表示动作已完成，与“正在做”的语境不符。",
+    "knowledgePoint": "过去进行时与 when 从句",
+    "difficulty": "easy"
+  },
+  {
+    "id": "yingyu-006",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "— Have you ever been to Beijing? — Yes, I ___ there last year.",
+    "options": [
+      "A. have gone",
+      "B. went",
+      "C. have been",
+      "D. go"
+    ],
+    "answer": "B",
+    "explanation": "答语中有明确的过去时间状语 last year，必须用一般过去时 went，不能用现在完成时。另外 have been to 表示“去过（已回来）”，have gone to 表示“去了（还没回来）”，第一句的提问方式也提示答语要落到具体过去时间。",
+    "knowledgePoint": "现在完成时与一般过去时的辨析",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yingyu-007",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "Tom is ___ than his brother.",
+    "options": [
+      "A. tall",
+      "B. taller",
+      "C. tallest",
+      "D. the tallest"
+    ],
+    "answer": "B",
+    "explanation": "句中有 than，两者比较要用比较级 taller。tall 是原级，不能与 than 连用；tallest 是最高级，用于三者及以上比较，且最高级前通常加 the。口诀：两者比较用比较级，比较级后常跟 than。",
+    "knowledgePoint": "形容词的比较级",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yingyu-008",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "If it ___ tomorrow, we will stay at home.",
+    "options": [
+      "A. will rain",
+      "B. rains",
+      "C. rained",
+      "D. is raining"
+    ],
+    "answer": "B",
+    "explanation": "if 引导条件状语从句时遵循“主将从现”：主句用一般将来时 will stay，从句用一般现在时 rains。主语 it 是第三人称单数，所以 rain 加 -s。A 项在 if 条件句中是典型错误。",
+    "knowledgePoint": "第一条件句·主将从现",
+    "difficulty": "hard"
+  },
+  {
+    "id": "yingyu-009",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "He has lived here ___ 2010.（填入合适的介词）",
+    "answer": "since",
+    "explanation": "现在完成时中，since 后接时间点（2010、last year、three years ago 等），表示“自从……以来”；for 后接时间段（three years、a long time 等）。这里 2010 是时间点，所以用 since。",
+    "knowledgePoint": "现在完成时·since 与 for",
+    "difficulty": "medium"
+  },
+  {
+    "id": "yingyu-010",
+    "subject": "英语",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "用所给词的适当形式填空：The box is ___ (heavy) than that one.",
+    "answer": "heavier",
+    "explanation": "有 than 要用比较级。heavy 是以“辅音字母 + y”结尾的形容词，变比较级时把 y 变为 i 再加 -er，得到 heavier。同类词还有 happy→happier、easy→easier、busy→busier。",
+    "knowledgePoint": "形容词比较级·规则变化",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-001",
+    "subject": "科学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列物态变化中，需要吸收热量的是：",
+    "options": [
+      "A. 凝固",
+      "B. 液化",
+      "C. 升华",
+      "D. 凝华"
+    ],
+    "answer": "C",
+    "explanation": "六种物态变化中，熔化（固→液）、汽化（液→气）、升华（固→气）都要吸热；凝固、液化、凝华都要放热。升华是物质由固态直接变为气态，如干冰升华、樟脑丸变小，需要吸热。",
+    "knowledgePoint": "物态变化与吸放热",
+    "difficulty": "easy"
+  },
+  {
+    "id": "kexue-002",
+    "subject": "科学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "用托盘天平称量某物体质量，物体放在左盘，砝码放在右盘，所加砝码总质量为 50 g，游码在标尺上的示数为 2.4 g，则该物体的质量为：",
+    "options": [
+      "A. 47.6 g",
+      "B. 50 g",
+      "C. 52.4 g",
+      "D. 50.24 g"
+    ],
+    "answer": "C",
+    "explanation": "“左物右码”是正确放法，此时物体质量=砝码总质量+游码示数=50 g+2.4 g=52.4 g。只有当物体与砝码放反（左码右物）时，才要用砝码质量减去游码示数，本题是正确放法，所以相加。",
+    "knowledgePoint": "天平的使用与读数",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-003",
+    "subject": "科学",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "用显微镜观察到的物像是：",
+    "options": [
+      "A. 放大、正立的虚像",
+      "B. 放大、倒立的虚像",
+      "C. 缩小、倒立的实像",
+      "D. 放大、倒立的实像"
+    ],
+    "answer": "B",
+    "explanation": "显微镜的目镜和物镜都相当于凸透镜，物镜成倒立放大的实像，目镜再把它放大成虚像，所以人眼看到的是放大、倒立的虚像。正因为是倒像，要把视野左上方的物像移到中央，玻片应向左上方移动。",
+    "knowledgePoint": "显微镜的成像特点",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-004",
+    "subject": "科学",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "单位换算：1 g/cm³=____ kg/m³。",
+    "answer": "1000",
+    "explanation": "1 g/cm³ 表示每立方厘米 1 克，而 1 g=0.001 kg，1 cm³=10⁻⁶ m³，所以 1 g/cm³=0.001/10⁻⁶ kg/m³=1000 kg/m³。水的密度 1.0 g/cm³ 就是 1.0×10³ kg/m³。",
+    "knowledgePoint": "密度的单位换算",
+    "difficulty": "easy"
+  },
+  {
+    "id": "kexue-005",
+    "subject": "科学",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "声音在 15℃ 空气中的传播速度约为 ____ m/s。",
+    "answer": "340",
+    "explanation": "声音的传播需要介质，真空不能传声。15℃ 时空气中的声速约为 340 m/s，温度越高声速越大；声音在固体中传播最快，液体次之，气体最慢。",
+    "knowledgePoint": "声音的传播与声速",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-006",
+    "subject": "科学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "空气中体积分数约占 21% 的气体是：",
+    "options": [
+      "A. 氮气",
+      "B. 氧气",
+      "C. 二氧化碳",
+      "D. 稀有气体"
+    ],
+    "answer": "B",
+    "explanation": "空气的成分按体积分数计算，大约是氮气 78%、氧气 21%、稀有气体 0.94%、二氧化碳 0.03%、其他气体和杂质 0.03%。注意是体积分数而不是质量分数。",
+    "knowledgePoint": "空气的组成",
+    "difficulty": "easy"
+  },
+  {
+    "id": "kexue-007",
+    "subject": "科学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "把一个体积为 100 cm³ 的物体完全浸没在水中，它受到的浮力约为（ρ水=1.0×10³ kg/m³，g 取 10 N/kg）：",
+    "options": [
+      "A. 0.1 N",
+      "B. 1 N",
+      "C. 10 N",
+      "D. 100 N"
+    ],
+    "answer": "B",
+    "explanation": "浸没时 V排=V物=100 cm³=1×10⁻⁴ m³，由阿基米德原理 F浮=ρ液gV排=1.0×10³×10×1×10⁻⁴=1 N。关键是先把体积换算成国际单位 m³，再代入公式。",
+    "knowledgePoint": "阿基米德原理与浮力计算",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-008",
+    "subject": "科学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "下列变化中属于化学变化的是：",
+    "options": [
+      "A. 水结成冰",
+      "B. 铁生锈",
+      "C. 酒精挥发",
+      "D. 玻璃破碎"
+    ],
+    "answer": "B",
+    "explanation": "化学变化的本质特征是有新物质生成。铁生锈生成了铁锈（主要成分是氧化铁），是新物质，属于化学变化；水结成冰、酒精挥发、玻璃破碎都只是状态或形状改变，没有新物质生成，属于物理变化。",
+    "knowledgePoint": "物理变化与化学变化的判断",
+    "difficulty": "medium"
+  },
+  {
+    "id": "kexue-009",
+    "subject": "科学",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "电阻 R₁=10 Ω 与 R₂=20 Ω 串联后接在电压为 6 V 的电源上，则 R₁ 两端的电压为：",
+    "options": [
+      "A. 2 V",
+      "B. 4 V",
+      "C. 6 V",
+      "D. 1 V"
+    ],
+    "answer": "A",
+    "explanation": "串联总电阻 R总=R₁+R₂=30 Ω，电流 I=U/R总=6/30=0.2 A，串联电流处处相等，所以 U₁=IR₁=0.2×10=2 V，U₂=0.2×20=4 V。串联电路中电阻越大分得的电压越多。",
+    "knowledgePoint": "串联电路与欧姆定律",
+    "difficulty": "hard"
+  },
+  {
+    "id": "kexue-010",
+    "subject": "科学",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "50 g 质量分数为 20% 的氯化钠溶液中，含氯化钠的质量为 ____ g。",
+    "answer": "10",
+    "explanation": "溶质质量分数=溶质质量÷溶液质量×100%，所以溶质质量=溶液质量×质量分数=50×20%=10 g。若再问溶剂水的质量，则为 50-10=40 g，注意分子是溶质质量、分母是溶液质量，不能混淆。",
+    "knowledgePoint": "溶质质量分数的计算",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-001",
+    "subject": "道法",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "法律区别于道德等行为规范的最主要特征是：",
+    "options": [
+      "A. 由国家制定或认可",
+      "B. 靠国家强制力保证实施",
+      "C. 对全体社会成员具有普遍约束力",
+      "D. 规范人们的行为"
+    ],
+    "answer": "B",
+    "explanation": "法律有三个基本特征：由国家制定或认可、靠国家强制力保证实施、对全体社会成员具有普遍约束力。其中，靠国家强制力保证实施是法律区别于道德等行为规范的最主要特征，因为道德主要靠社会舆论和信念维持。D 项道德也具有，不是法律独有。",
+    "knowledgePoint": "法律的特征",
+    "difficulty": "easy"
+  },
+  {
+    "id": "daofa-002",
+    "subject": "道法",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列做法属于对未成年人进行“网络保护”的是：",
+    "options": [
+      "A. 学校开展防溺水安全教育",
+      "B. 网络游戏平台按规定限制未成年人游戏时间",
+      "C. 人民法院不公开审理未成年人犯罪案件",
+      "D. 父母保障适龄子女按时入学"
+    ],
+    "answer": "B",
+    "explanation": "未成年人保护法规定家庭保护、学校保护、社会保护、网络保护、政府保护、司法保护六大保护。B 由网络产品和服务提供者实施，属于网络保护；A 是学校保护，C 是司法保护，D 是家庭保护。",
+    "knowledgePoint": "未成年人保护·六大保护",
+    "difficulty": "easy"
+  },
+  {
+    "id": "daofa-003",
+    "subject": "道法",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "关于友谊，下列说法正确的是：",
+    "options": [
+      "A. 友谊是平等的、双向的，需要用心呵护",
+      "B. 朋友之间不能有任何分歧",
+      "C. 网上交友可以随意透露个人信息",
+      "D. 为了维系友谊可以放弃原则"
+    ],
+    "answer": "A",
+    "explanation": "友谊是一种亲密的关系、心灵的相遇，是平等的、双向的，需要双方用心关怀、相互尊重。B 错，朋友之间有分歧很正常，关键是如何处理；C 错，网络具有虚拟性，随意透露个人信息会带来安全隐患；D 错，友谊不能没有原则，不能以牺牲原则为代价维持所谓友谊。",
+    "knowledgePoint": "友谊的特质与呵护友谊",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-004",
+    "subject": "道法",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "下列不属于生命特点的是：",
+    "options": [
+      "A. 生命来之不易",
+      "B. 生命是独特的",
+      "C. 生命是不可逆的",
+      "D. 生命可以重来"
+    ],
+    "answer": "D",
+    "explanation": "生命来之不易、独特、不可逆、短暂，正因为如此我们才要珍爱生命、敬畏生命。“生命可以重来”的说法违背了生命的不可逆性，是错误观点。",
+    "knowledgePoint": "生命的特点与敬畏生命",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-005",
+    "subject": "道法",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "法律对全体社会成员具有____约束力，这是法律的三个基本特征之一。",
+    "answer": "普遍",
+    "explanation": "法律对全体社会成员具有普遍约束力，任何人不论职位高低、功劳大小，都必须遵守法律，违法都要受到追究。这一特征体现了法律面前人人平等。",
+    "knowledgePoint": "法律的特征",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-006",
+    "subject": "道法",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "我国宪法规定，中华人民共和国的一切权力属于：",
+    "options": [
+      "A. 人民",
+      "B. 公民",
+      "C. 人民代表大会",
+      "D. 国家主席"
+    ],
+    "answer": "A",
+    "explanation": "宪法第二条规定，中华人民共和国的一切权力属于人民。人民通过选举产生人大代表，组成各级人民代表大会，代表人民行使国家权力。注意“人民”是政治概念，“公民”是法律概念，二者不能混用。",
+    "knowledgePoint": "我国的国家性质与一切权力属于人民",
+    "difficulty": "easy"
+  },
+  {
+    "id": "daofa-007",
+    "subject": "道法",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "下列关于公民权利与义务关系的说法，正确的是：",
+    "options": [
+      "A. 先享受权利，后履行义务",
+      "B. 权利与义务相互依存、相互促进",
+      "C. 权利可以放弃，义务也可以放弃",
+      "D. 只享受权利、不履行义务也是可以的"
+    ],
+    "answer": "B",
+    "explanation": "公民的权利与义务相互依存、相互促进：权利的实现需要义务的履行，义务的履行促进权利的实现；公民既是权利的享有者，也是义务的履行者，要始终坚持权利和义务相统一。A、D 割裂了二者关系，C 错误，义务具有强制性，不能随意放弃。",
+    "knowledgePoint": "权利与义务的关系",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-008",
+    "subject": "道法",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "全国人民代表大会的性质是：",
+    "options": [
+      "A. 最高国家权力机关",
+      "B. 最高国家行政机关",
+      "C. 最高国家审判机关",
+      "D. 最高国家检察机关"
+    ],
+    "answer": "A",
+    "explanation": "全国人民代表大会是最高国家权力机关，行使立法权、决定权、任免权、监督权。最高国家行政机关是国务院，最高国家审判机关是最高人民法院，最高国家检察机关是最高人民检察院，三者都由全国人大产生、对它负责。",
+    "knowledgePoint": "国家机构的性质与职权",
+    "difficulty": "hard"
+  },
+  {
+    "id": "daofa-009",
+    "subject": "道法",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "我国宪法规定，中华人民共和国公民在法律面前一律____。",
+    "answer": "平等",
+    "explanation": "宪法第三十三条规定，中华人民共和国公民在法律面前一律平等。这意味着任何公民都平等地享有宪法和法律规定的权利、平等地履行义务，任何组织和个人都没有超越宪法和法律的特权。",
+    "knowledgePoint": "法律面前人人平等",
+    "difficulty": "medium"
+  },
+  {
+    "id": "daofa-010",
+    "subject": "道法",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "我国的根本法是____。",
+    "answer": "宪法",
+    "explanation": "宪法是国家的根本法，是治国安邦的总章程，具有最高的法律效力。它规定国家生活中最根本、最重要的问题，是其他法律的立法基础和立法依据，其制定和修改程序也比普通法律更严格。",
+    "knowledgePoint": "宪法的地位",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-001",
+    "subject": "历史",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "我国历史上第一个统一的多民族的封建国家是：",
+    "options": [
+      "A. 夏朝",
+      "B. 商朝",
+      "C. 秦朝",
+      "D. 西汉"
+    ],
+    "answer": "C",
+    "explanation": "公元前 221 年，秦王嬴政完成统一，建立秦朝，定都咸阳。秦朝是我国历史上第一个统一的多民族的封建国家，它确立的中央集权制度对后世影响深远。夏朝是我国历史上第一个王朝，但不是统一的多民族封建国家。",
+    "knowledgePoint": "秦统一中国",
+    "difficulty": "easy"
+  },
+  {
+    "id": "lishi-002",
+    "subject": "历史",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "为三国鼎立局面的形成奠定基础的战役是：",
+    "options": [
+      "A. 官渡之战",
+      "B. 赤壁之战",
+      "C. 淝水之战",
+      "D. 巨鹿之战"
+    ],
+    "answer": "B",
+    "explanation": "208 年赤壁之战中，孙刘联军以火攻大败曹操，曹操退回北方，为三国鼎立局面的形成奠定了基础。官渡之战为曹操统一北方奠定基础；淝水之战是东晋与前秦之战；巨鹿之战是项羽击败秦军主力的战役。",
+    "knowledgePoint": "三国鼎立",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-003",
+    "subject": "历史",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "郑和下西洋最远到达：",
+    "options": [
+      "A. 印度洋沿岸",
+      "B. 非洲东海岸和红海沿岸",
+      "C. 欧洲沿海",
+      "D. 美洲西海岸"
+    ],
+    "answer": "B",
+    "explanation": "1405—1433 年，郑和率船队七下西洋，先后到达亚非三十多个国家和地区，最远到达非洲东海岸和红海沿岸，比欧洲航海家的远航早半个多世纪。郑和下西洋增进了中国与亚非国家和地区的相互了解和友好往来。",
+    "knowledgePoint": "郑和下西洋",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-004",
+    "subject": "历史",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "公元前 221 年，____完成统一大业，建立起我国历史上第一个统一的多民族的封建国家。",
+    "answer": "嬴政",
+    "explanation": "公元前 221 年，秦王嬴政灭六国完成统一，自称“始皇帝”，史称秦始皇。“嬴”是姓，不要写成“赢”。",
+    "knowledgePoint": "秦统一中国·秦始皇",
+    "difficulty": "easy"
+  },
+  {
+    "id": "lishi-005",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "中国近代史的开端是：",
+    "options": [
+      "A. 鸦片战争",
+      "B. 甲午中日战争",
+      "C. 辛亥革命",
+      "D. 五四运动"
+    ],
+    "answer": "A",
+    "explanation": "1840 年爆发的鸦片战争和 1842 年签订的《南京条约》，使中国独立主权遭到破坏，开始沦为半殖民地半封建社会，因此鸦片战争是中国近代史的开端。五四运动是中国新民主主义革命的开端，两者不要混淆。",
+    "knowledgePoint": "鸦片战争与中国近代史开端",
+    "difficulty": "easy"
+  },
+  {
+    "id": "lishi-006",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "使中国完全沦为半殖民地半封建社会的条约是：",
+    "options": [
+      "A. 《南京条约》",
+      "B. 《马关条约》",
+      "C. 《辛丑条约》",
+      "D. 《北京条约》"
+    ],
+    "answer": "C",
+    "explanation": "1900 年八国联军侵华，1901 年清政府被迫签订《辛丑条约》，赔款白银 4.5 亿两、划定使馆界、允许列强驻兵等，中国完全沦为半殖民地半封建社会。四个条约的递进关系：开始沦为—进一步加深—大大加深—完全沦为。",
+    "knowledgePoint": "八国联军侵华与《辛丑条约》",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-007",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "打响武装反抗国民党反动统治第一枪的事件是：",
+    "options": [
+      "A. 秋收起义",
+      "B. 南昌起义",
+      "C. 广州起义",
+      "D. 井冈山会师"
+    ],
+    "answer": "B",
+    "explanation": "1927 年 8 月 1 日，周恩来、贺龙、叶挺、朱德、刘伯承等领导南昌起义，打响武装反抗国民党反动统治的第一枪，是中国共产党创建人民军队、独立领导武装斗争的开始。8 月 1 日因此成为建军节。",
+    "knowledgePoint": "南昌起义",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-008",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "新中国成立以来党的历史上具有深远意义的伟大转折是：",
+    "options": [
+      "A. 中共八大",
+      "B. 十一届三中全会",
+      "C. 中共十二大",
+      "D. 中共十四大"
+    ],
+    "answer": "B",
+    "explanation": "1978 年 12 月，中共十一届三中全会召开，作出把党和国家工作中心转移到经济建设上来、实行改革开放的历史性决策，是新中国成立以来党的历史上具有深远意义的伟大转折。中共十四大提出建立社会主义市场经济体制的目标。",
+    "knowledgePoint": "十一届三中全会与改革开放",
+    "difficulty": "hard"
+  },
+  {
+    "id": "lishi-009",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "1935 年 1 月召开的____会议，确立了以毛泽东为核心的党中央的正确领导，是党的历史上生死攸关的转折点。",
+    "answer": "遵义",
+    "explanation": "1935 年 1 月，中共中央在贵州遵义召开政治局扩大会议，纠正了“左”倾错误，确立了以毛泽东为代表的马克思主义正确路线在党中央的领导地位，是党的历史上生死攸关的转折点。",
+    "knowledgePoint": "红军长征·遵义会议",
+    "difficulty": "medium"
+  },
+  {
+    "id": "lishi-010",
+    "subject": "历史",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "1997 年 7 月 1 日，中国政府对____恢复行使主权，这是“一国两制”构想的成功实践。",
+    "answer": "香港",
+    "explanation": "1997 年 7 月 1 日香港回归祖国，1999 年 12 月 20 日澳门回归祖国，这是“一国两制”构想的成功实践，标志着中国人民在完成祖国统一大业的道路上迈出了重要一步。",
+    "knowledgePoint": "“一国两制”与祖国统一",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-001",
+    "subject": "地理",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "地球表面海洋和陆地面积的比例大约是：",
+    "options": [
+      "A. 三分海洋、七分陆地",
+      "B. 七分海洋、三分陆地",
+      "C. 海洋和陆地各占一半",
+      "D. 四分海洋、六分陆地"
+    ],
+    "answer": "B",
+    "explanation": "地球表面约 71% 是海洋，29% 是陆地，概括为“七分海洋、三分陆地”。从太空看地球更像一个“水球”，这也是地球被称为“蓝色星球”的原因。",
+    "knowledgePoint": "海陆面积比例",
+    "difficulty": "easy"
+  },
+  {
+    "id": "dili-002",
+    "subject": "地理",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "世界上面积最大的大洲是：",
+    "options": [
+      "A. 非洲",
+      "B. 亚洲",
+      "C. 北美洲",
+      "D. 南极洲"
+    ],
+    "answer": "B",
+    "explanation": "全球七大洲按面积由大到小依次是亚洲、非洲、北美洲、南美洲、南极洲、欧洲、大洋洲，亚洲面积最大。四大洋按面积由大到小是太平洋、大西洋、印度洋、北冰洋。",
+    "knowledgePoint": "七大洲和四大洋",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-003",
+    "subject": "地理",
+    "grade": "七年级",
+    "type": "choice",
+    "stem": "东西半球的分界线是：",
+    "options": [
+      "A. 0° 经线和 180° 经线",
+      "B. 20°W 和 160°E 组成的经线圈",
+      "C. 赤道",
+      "D. 本初子午线"
+    ],
+    "answer": "B",
+    "explanation": "东西半球的分界线是 20°W 和 160°E 组成的经线圈，这样划分可以避免把非洲、欧洲的一些国家分割到两个半球。0° 和 180° 经线只是经度的起止线，不是东西半球的分界线；赤道是南北半球的分界线。",
+    "knowledgePoint": "东西半球的分界线",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-004",
+    "subject": "地理",
+    "grade": "七年级",
+    "type": "fill",
+    "stem": "世界上面积最大的大洋是____。",
+    "answer": "太平洋",
+    "explanation": "太平洋面积约占世界海洋总面积的一半，是世界上面积最大、最深的大洋；四大洋按面积由大到小依次是太平洋、大西洋、印度洋、北冰洋。",
+    "knowledgePoint": "四大洋",
+    "difficulty": "easy"
+  },
+  {
+    "id": "dili-005",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "我国地势的总特征是：",
+    "options": [
+      "A. 东高西低",
+      "B. 西高东低，呈三级阶梯分布",
+      "C. 南高北低",
+      "D. 中部高、四周低"
+    ],
+    "answer": "B",
+    "explanation": "我国地势西高东低，呈三级阶梯分布：第一级以青藏高原为主，第二级是高原和盆地，第三级是平原和丘陵。西高东低的地势使河流自西向东流、沟通东西交通，也有利于海洋水汽深入内陆。",
+    "knowledgePoint": "我国的地势特征",
+    "difficulty": "easy"
+  },
+  {
+    "id": "dili-006",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "我国南方地区与北方地区的分界线是：",
+    "options": [
+      "A. 400 毫米年等降水量线",
+      "B. 秦岭—淮河一线",
+      "C. 大兴安岭—太行山一线",
+      "D. 黑河—腾冲一线"
+    ],
+    "answer": "B",
+    "explanation": "秦岭—淮河一线是我国南方地区与北方地区的分界线，它同时是我国 1 月 0℃ 等温线、800 毫米年等降水量线、亚热带与暖温带分界线、湿润区与半湿润区分界线。400 毫米年等降水量线是北方地区与西北地区的分界线，黑河—腾冲一线是人口地理分界线。",
+    "knowledgePoint": "四大地理区域的分界线",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-007",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "我国最大的综合性工业基地是：",
+    "options": [
+      "A. 辽中南工业基地",
+      "B. 京津唐工业基地",
+      "C. 沪宁杭工业基地",
+      "D. 珠江三角洲工业基地"
+    ],
+    "answer": "C",
+    "explanation": "沪宁杭工业基地（长江三角洲工业基地）是全国最大的综合性工业基地；辽中南工业基地以重工业为主，京津唐工业基地是北方最大的综合性工业基地，珠江三角洲工业基地以轻工业为主。",
+    "knowledgePoint": "我国四大工业基地",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-008",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "choice",
+    "stem": "我国西北地区气候干旱的主要原因是：",
+    "options": [
+      "A. 纬度位置高，太阳辐射弱",
+      "B. 深居内陆、距海遥远，加上高大山脉阻挡水汽",
+      "C. 地势高，气温低",
+      "D. 人口稀少，蒸发弱"
+    ],
+    "answer": "B",
+    "explanation": "西北地区深居内陆、距海遥远，海洋水汽难以到达；加上周围有高大山脉阻挡，水汽更难进入，降水稀少、蒸发旺盛，形成温带大陆性气候，干旱成为本区主要自然特征。植被自东向西依次为草原、荒漠草原、荒漠。",
+    "knowledgePoint": "西北地区的自然特征与成因",
+    "difficulty": "hard"
+  },
+  {
+    "id": "dili-009",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "我国陆地面积约____万平方千米，居世界第三位。",
+    "answer": "960",
+    "explanation": "我国陆地面积约 960 万平方千米，仅次于俄罗斯和加拿大，居世界第三位。我国陆上邻国有 14 个，隔海相望的国家有 6 个。",
+    "knowledgePoint": "我国的疆域",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dili-010",
+    "subject": "地理",
+    "grade": "八年级",
+    "type": "fill",
+    "stem": "我国人口地理分界线是黑河—____一线，此线东南人口稠密、西北人口稀疏。",
+    "answer": "腾冲",
+    "explanation": "我国人口地理分界线是黑龙江黑河至云南腾冲一线。该线东南侧面积约占全国 43%，人口却占绝大多数；西北侧面积广大而人口稀少，这与地形、气候、交通等自然和社会经济条件有关。",
+    "knowledgePoint": "我国人口的分布",
+    "difficulty": "medium"
+  }
+]

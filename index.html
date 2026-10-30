@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>AI 学习助手</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app is-booting">
+    <div class="boot-screen">
+      <div class="boot-mark">
+        <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <rect x="4" y="4" width="40" height="40" rx="13" fill="url(#bootGrad)" />
+          <path d="M16 31.5V21.5C16 19.6 17.6 18 19.5 18H22c2 0 3.6 1.6 3.6 3.6 0-2 1.6-3.6 3.6-3.6h2.3c1.9 0 3.5 1.6 3.5 3.5v9.9" stroke="#fff" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M24 25v6.4M27.6 25v6.4M20.4 25v6.4" stroke="#fff" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M14 34.5h20" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".55" />
+          <defs>
+            <linearGradient id="bootGrad" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6B7BFF" />
+              <stop offset="1" stop-color="#8F6BFF" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <h1 class="boot-title">AI 学习助手</h1>
+      <p class="boot-sub" id="boot-sub">正在初始化…</p>
+      <div class="boot-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div id="toast-root" class="toast-root" role="status" aria-live="polite"></div>
+  <div id="modal-root" class="modal-root" aria-hidden="true"></div>
+
+  <noscript>
+    <div style="padding:32px;font-family:sans-serif;color:#f1f5f9;background:#0f172a;min-height:100vh">请启用 JavaScript 以使用 AI 学习助手。</div>
+  </noscript>
+
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>
