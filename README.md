@@ -4,6 +4,9 @@
 
 前端、后端、运行环境全部打包进安装包，安装后即可离线启动（AI 功能需要联网调用你自己的 API）。
 
+> 📦 **直接下载安装包**：<https://github.com/AnJianhe/ai-study-assistant/releases/latest>
+> 仓库：<https://github.com/AnJianhe/ai-study-assistant>
+
 ## 一、安装与启动
 
 1. 双击 `dist/AI学习助手-1.0.0-安装包.exe`。
