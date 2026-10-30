@@ -9,7 +9,7 @@
 
 ## 一、安装与启动
 
-1. 双击 `dist/AI学习助手-1.0.0-安装包.exe`。
+1. 双击 `dist/AI学习助手-1.0.2-安装包.exe`（或从 [Releases](https://github.com/AnJianhe/ai-study-assistant/releases/latest) 下载最新版）。
 2. 选择安装目录（默认 `%LOCALAPPDATA%\Programs\AI学习助手`），安装程序会创建桌面快捷方式和开始菜单项。
 3. 首次启动进入引导页：填写 API → 个人信息 → 成绩与教材确认 → 开始学习。
 
