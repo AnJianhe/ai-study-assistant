@@ -1589,6 +1589,8 @@ button:active:not(:disabled),
   align-items: center;
   justify-content: center;
   padding: 24px;
+  /* 兜底：容器本身不接收点击，只有遮罩和弹窗本体可点，避免空容器挡住整个页面 */
+  pointer-events: none;
 }
 
 .modal-mask {
@@ -1596,6 +1598,7 @@ button:active:not(:disabled),
   inset: 0;
   background: rgba(2, 6, 23, 0.72);
   animation: fadeIn 200ms ease-out;
+  pointer-events: auto;
 }
 
 .modal {
@@ -1610,6 +1613,7 @@ button:active:not(:disabled),
   box-shadow: var(--shadow-lg);
   animation: modalIn 0.24s var(--ease);
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .modal.is-wide {

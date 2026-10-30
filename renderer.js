@@ -487,6 +487,17 @@ function closeModal() {
   }
 }
 
+// 关键防御：弹窗容器默认必须隐藏。它是 fixed 全屏容器，若空着还可见，
+// 会变成看不见的"幽灵遮罩"，把所有页面点击全部吃掉（表现为"界面点不了"）。
+(function ensureModalHidden() {
+  const root = document.getElementById('modal-root');
+  if (root) {
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    root.innerHTML = '';
+  }
+})();
+
 function confirmDialog(opts) {
   return new Promise(function (resolve) {
     confirmResolve = resolve;
