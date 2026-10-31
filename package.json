@@ -1,6 +1,6 @@
 {
   "name": "ai-study-assistant",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "AI 个性化学习助手（浙江初中版）",
   "main": "main.js",
   "author": "AI Study Assistant",
