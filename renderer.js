@@ -1143,7 +1143,8 @@ function navigate(route) {
   location.hash = target;
 }
 
-function render() {
+function render(opts) {
+  const opts2 = opts || {};
   const route = parseHash();
   const known = !!PAGES[route] || route === 'welcome';
   const actual = known ? route : 'home';
@@ -1160,13 +1161,18 @@ function render() {
 
   const view = document.getElementById('view');
   if (!view) return;
+  // 局部操作触发的重绘保持滚动位置；切换页面时回到顶部（临时关闭平滑滚动，避免"先跳顶再滚回"）
+  const prevTop = opts2.resetScroll ? 0 : view.scrollTop;
+  const prevBehavior = view.style.scrollBehavior;
+  view.style.scrollBehavior = 'auto';
   if (actual === 'welcome') {
     view.innerHTML = renderWelcome();
   } else {
     const page = PAGES[actual];
     view.innerHTML = '<div class="page" id="page-root">' + (page ? page() : renderNotFound()) + '</div>';
   }
-  view.scrollTop = 0;
+  view.scrollTop = prevTop;
+  view.style.scrollBehavior = prevBehavior;
   if (actual === 'assistant' && PAGES.assistantAfterRender) PAGES.assistantAfterRender();
   if (actual === 'quiz' && PAGES.quizAfterRender) PAGES.quizAfterRender();
   if (actual === 'report' && PAGES.reportAfterRender) PAGES.reportAfterRender();
@@ -5292,7 +5298,7 @@ function bindGlobalEvents() {
   document.addEventListener('change', onDocumentInput);
   document.addEventListener('keydown', onDocumentKeydown);
   window.addEventListener('hashchange', function () {
-    render();
+    render({ resetScroll: true });
   });
   window.addEventListener('beforeunload', function () {
     state.aiJobs.forEach(function (job) {
