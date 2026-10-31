@@ -2154,6 +2154,7 @@ function onQuizDone(evt) {
   q.answers = {};
   q.index = 0;
   q.step = 'answering';
+  q.answeringStartedAt = Date.now();
   q.raw = evt.text || '';
   q.search = evt.search || null;
   q.gen.status = 'done';
@@ -2275,12 +2276,18 @@ async function submitQuiz() {
     answers: Object.assign({}, q.answers)
   };
 
+  // 实际用时：从开始答题（题目生成完成）到点提交的时间；"计划时长"只是学生预估的可用时间
+  const actualMinutes = Math.max(1, Math.round((Date.now() - (q.answeringStartedAt || Date.now())) / 60000));
+  q.actualMinutes = actualMinutes;
+
   const messages = [{
     role: 'user',
     content:
       '请批改下面这组' + q.subject + '练习，并给出学习报告。\n' +
       '学生：' + (state.profile.grade || '八年级') + '\n' +
-      '练习时长：' + quizMinutes() + ' 分钟，作答时的状态：' + quizWilling() + '\n' +
+      '计划可用时长：' + quizMinutes() + ' 分钟（这是学生开始前预估的时间，不是实际用时，不要把它当成真实耗时来评价）\n' +
+      '实际用时：' + actualMinutes + ' 分钟（从开始答题到提交的时间）\n' +
+      '作答时的状态：' + quizWilling() + '\n' +
       '题目与学生的作答：\n' + JSON.stringify(quizPayload.questions, null, 2) + '\n' +
       '请逐题判断对错，并输出 JSON：' +
       '{"stats":{"total":5,"correct":3,"accuracy":0.6},' +
@@ -2297,7 +2304,9 @@ async function submitQuiz() {
       grade: state.profile.grade || '八年级',
       materialIds: q.materialIds.slice(),
       useTextbooks: !!q.useTextbooks,
-      quiz: quizPayload
+      quiz: quizPayload,
+      actualMinutes: actualMinutes,
+      plannedMinutes: quizMinutes()
     },
     options: { deepThinking: false, webSearch: true }
   };
@@ -2390,6 +2399,7 @@ function buildReportFromDone(evt, q) {
     mode: 'quiz',
     subject: q.subject,
     plan: { minutes: quizMinutes(), willing: quizWilling(), custom: q.focus || '' },
+    duration: { planned: quizMinutes(), actual: q.actualMinutes || null },
     questions: questions,
     stats: stats,
     ai: ai,
@@ -2512,11 +2522,18 @@ function renderReportDetail(report) {
   const sources = Array.isArray(search.results) ? search.results : [];
   const graded = (report.questions || []).filter(function (q) { return q.correct === true || q.correct === false; }).length;
 
+  const actualMinutes = report.duration && report.duration.actual != null ? report.duration.actual : null;
+  const plannedMinutes = (report.duration && report.duration.planned) || plan.minutes || null;
+  const timeValue = actualMinutes != null ? actualMinutes : plannedMinutes != null ? plannedMinutes : '—';
+  const timeLabel =
+    actualMinutes != null
+      ? '实际用时（分钟）' + (plannedMinutes ? ' · 计划 ' + plannedMinutes : '')
+      : '计划时长（分钟）';
   const statsHtml =
     '<div class="stat"><div class="stat-value">' + (stats.correct != null ? stats.correct : '—') + '</div><div class="stat-label">答对题数</div></div>' +
     '<div class="stat"><div class="stat-value">' + (stats.total != null ? stats.total : (report.questions || []).length) + '</div><div class="stat-label">总题数</div></div>' +
     '<div class="stat"><div class="stat-value">' + (graded || (stats.total || 0)) + '</div><div class="stat-label">已批改</div></div>' +
-    '<div class="stat"><div class="stat-value">' + (plan.minutes || '—') + '</div><div class="stat-label">练习时长（分钟）</div></div>';
+    '<div class="stat"><div class="stat-value">' + timeValue + '</div><div class="stat-label">' + timeLabel + '</div></div>';
 
   const answersHtml = (report.questions || []).map(function (item, idx) {
     const resultIcon = item.correct === true ? icon('check-circle') : item.correct === false ? icon('alert-circle') : icon('info');
