@@ -1004,6 +1004,11 @@ function dispatchAIEvent(evt) {
     if (job.onSearch) job.onSearch(evt, job);
     return;
   }
+  if (evt.type === 'tool') {
+    // AI 正在按需查看某个章节：转成状态提示，不打断流式输出
+    if (job.onStatus) job.onStatus('writing', '正在查看「' + (evt.title || evt.id || '相关章节') + '」…');
+    return;
+  }
   if (evt.type === 'usage') {
     if (job.onUsage) job.onUsage(evt, job);
     return;
@@ -3389,19 +3394,21 @@ function renderTextbookGrid() {
     const subject = book.subject || '综合';
     const meta = subjectMeta(subject);
     const version = book.version || '';
-    return '<button class="book-card" data-act="read-textbook" data-id="' + esc(book.id) + '">' +
-      '<div class="book-cover ' + meta.cls + '">' +
-        '<div class="book-cover-title">' + esc(subject) + '</div>' +
-        '<div class="book-cover-meta">' + esc(version) + ' · ' + esc(book.grade || '') + '</div>' +
-      '</div>' +
-      '<div class="book-title">' + esc(book.title || (subject + ' 教材')) + '</div>' +
+    return '<div class="book-card">' +
+      '<button class="book-open" data-act="read-textbook" data-id="' + esc(book.id) + '">' +
+        '<div class="book-cover ' + meta.cls + '">' +
+          '<div class="book-cover-title">' + esc(subject) + '</div>' +
+          '<div class="book-cover-meta">' + esc(version) + ' · ' + esc(book.grade || '') + '</div>' +
+        '</div>' +
+        '<div class="book-title">' + esc(book.title || (subject + ' 教材')) + '</div>' +
+      '</button>' +
       '<div class="book-meta">' +
         '<span class="badge badge-primary">内置</span>' +
         (book.chars ? '<span class="badge">' + esc(book.chars) + ' 字</span>' : '') +
         '<span class="grow"></span>' +
-        icon('arrow-right') +
+        '<button class="btn btn-ghost btn-sm" data-act="textbook-toc" data-id="' + esc(book.id) + '">' + icon('list') + '目录</button>' +
       '</div>' +
-    '</button>';
+    '</div>';
   }).join('') + '</div>';
 }
 
@@ -3443,11 +3450,26 @@ function renderMaterialList() {
         '</div>' +
       '</div>' +
       '<div class="material-actions">' +
+        (m.textLength ? '<button class="icon-btn" data-act="material-toc" data-id="' + esc(m.id) + '" title="查看目录">' + icon('list') + '</button>' : '') +
         '<button class="icon-btn" data-act="preview-material" data-id="' + esc(m.id) + '" title="预览">' + icon('eye') + '</button>' +
         '<button class="icon-btn is-danger" data-act="delete-material" data-id="' + esc(m.id) + '" title="删除">' + icon('trash') + '</button>' +
       '</div>' +
     '</div>';
   }).join('') + '</div>';
+}
+
+function renderTocList(toc, titleText) {
+  return toc.map(function (s) {
+    const indent = '  '.repeat(Math.max(0, Math.min(3, (Number(s.level) || 1) - 1)));
+    return '<div class="toc-row">' +
+      '<div class="toc-head">' + indent +
+        '<span class="toc-id">' + esc(s.id) + '</span> ' +
+        '<span class="toc-title">' + esc(s.title) + '</span>' +
+        '<span class="toc-chars">' + (s.chars || 0) + ' 字</span>' +
+      '</div>' +
+      (s.summary ? '<div class="toc-summary">' + esc(s.summary) + '</div>' : '') +
+    '</div>';
+  }).join('');
 }
 
 function formatSize(bytes) {
@@ -4041,6 +4063,11 @@ function renderSettingsBehavior(draft) {
       '<div><div class="switch-label">每日询问</div>' +
         '<div class="switch-desc">每天问一次「今天上了多少内容」</div></div>' +
       '<button class="switch' + (learning.dailyAsk !== false ? ' is-on' : '') + '" data-act="toggle-setting" data-key="learning.dailyAsk" role="switch" aria-checked="' + (learning.dailyAsk !== false ? 'true' : 'false') + '"></button>' +
+    '</div>' +
+    '<div class="switch-row">' +
+      '<div><div class="switch-label">自动生成目录</div>' +
+        '<div class="switch-desc">把教材和上传的 MD 文档按章节归档生成目录，AI 先看目录、再按需调取相关章节，不再一次性塞入整篇文档</div></div>' +
+      '<button class="switch' + (learning.autoToc !== false ? ' is-on' : '') + '" data-act="toggle-setting" data-key="learning.autoToc" role="switch" aria-checked="' + (learning.autoToc !== false ? 'true' : 'false') + '"></button>' +
     '</div>' +
     '<div class="form-grid mt-12">' +
       '<div class="field"><label class="field-label">' + icon('clock') + '询问时间</label>' +
@@ -4825,6 +4852,54 @@ ACTIONS['read-textbook'] = function (el) {
 
 ACTIONS['preview-material'] = function (el) {
   previewMaterial(el.dataset.id);
+};
+
+ACTIONS['material-toc'] = async function (el) {
+  const id = el.dataset.id;
+  try {
+    const toc = await api.materials.toc(id);
+    if (!toc || !toc.length) {
+      toast('这份材料没有可用的章节（可能是图片材料）', 'info');
+      return;
+    }
+    const mat = (state.materials || []).find(function (m) { return m.id === id; });
+    openModal({
+      title: '资料目录（自动生成）',
+      size: 'wide',
+      body:
+        '<div class="banner banner-info mb-16">' + icon('list') +
+          '<div><div class="banner-title">' + esc(mat ? mat.name : '资料') + ' · 共 ' + toc.length + ' 个章节</div>' +
+          '<div class="banner-desc">AI 会先看这份目录，再按需调取相关章节，不会一次性读完整篇文档。</div></div>' +
+        '</div>' +
+        '<div class="toc-list">' + renderTocList(toc) + '</div>'
+    });
+  } catch (err) {
+    toast(err && err.message ? err.message : '读取目录失败', 'error');
+  }
+};
+
+ACTIONS['textbook-toc'] = async function (el) {
+  const id = el.dataset.id;
+  try {
+    const toc = await api.textbooks.toc(id);
+    if (!toc || !toc.length) {
+      toast('这份教材没有可用的章节', 'info');
+      return;
+    }
+    const book = (state.textbooks || []).find(function (b) { return b.id === id; });
+    openModal({
+      title: '教材目录（自动生成）',
+      size: 'wide',
+      body:
+        '<div class="banner banner-info mb-16">' + icon('bookOpen') +
+          '<div><div class="banner-title">' + esc(book ? book.title : '教材') + ' · 共 ' + toc.length + ' 个章节</div>' +
+          '<div class="banner-desc">AI 会先看目录，再按需调取章节（例如从 4.4 跳回 4.3 查看定义）。</div></div>' +
+        '</div>' +
+        '<div class="toc-list">' + renderTocList(toc) + '</div>'
+    });
+  } catch (err) {
+    toast(err && err.message ? err.message : '读取目录失败', 'error');
+  }
 };
 
 ACTIONS['delete-material'] = async function (el) {

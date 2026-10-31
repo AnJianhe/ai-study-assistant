@@ -262,9 +262,11 @@ function registerIpc() {
     return true
   })
   ipcMain.handle('materials:readText', (_event, id) => materials.readText(String(id)))
+  ipcMain.handle('materials:toc', (_event, id) => materials.toc(String(id)))
 
   ipcMain.handle('textbooks:list', () => textbooks.list())
   ipcMain.handle('textbooks:read', (_event, id) => textbooks.read(String(id)))
+  ipcMain.handle('textbooks:toc', (_event, id) => textbooks.toc(String(id)))
 
   ipcMain.handle('bank:list', (_event, subject) => bank.list(subject))
 

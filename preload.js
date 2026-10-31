@@ -50,11 +50,13 @@ const api = {
     list: () => invoke('materials:list'),
     add: (payload) => invoke('materials:add', payload),
     remove: (id) => invoke('materials:remove', id),
-    readText: (id) => invoke('materials:readText', id)
+    readText: (id) => invoke('materials:readText', id),
+    toc: (id) => invoke('materials:toc', id)
   },
   textbooks: {
     list: () => invoke('textbooks:list'),
-    read: (id) => invoke('textbooks:read', id)
+    read: (id) => invoke('textbooks:read', id),
+    toc: (id) => invoke('textbooks:toc', id)
   },
   bank: {
     list: (subject) => invoke('bank:list', subject)
