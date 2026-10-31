@@ -154,6 +154,8 @@ const state = {
   reports: [],
   dailyLogs: {},
   makeups: [],
+  exams: [],
+  examForm: { name: '', date: '', subjects: [], note: '' },
   welcomed: false,
   needsWelcome: false,
   needsApi: true,
@@ -686,7 +688,8 @@ async function loadAll() {
     safeCall(function () { return api.store.get('welcomed'); }, false),
     safeCall(function () { return api.app.info(); }, null),
     safeCall(function () { return api.store.get('uiTheme'); }, null),
-    safeCall(function () { return api.store.get('chatHistory'); }, [])
+    safeCall(function () { return api.store.get('chatHistory'); }, []),
+    safeCall(function () { return api.store.get('exams'); }, [])
   ]);
   state.settings = mergeSettings(results[0]);
   state.profile = mergeProfile(results[1]);
@@ -698,6 +701,7 @@ async function loadAll() {
   state.plans = Array.isArray(results[7]) ? results[7] : [];
   state.reports = Array.isArray(results[8]) ? results[8] : [];
   state.dailyLogs = results[9] && typeof results[9] === 'object' ? results[9] : {};
+  state.exams = Array.isArray(results[15]) ? results[15] : [];
   state.makeups = Array.isArray(results[10]) ? results[10] : [];
   state.welcomed = !!results[11];
   state.appInfo = results[12];
@@ -1534,6 +1538,8 @@ function buildTodayAgenda() {
 
   state.plans.filter(function (p) {
     if (!p) return false;
+    // 考试复习计划项带具体日期时，只在当天出现
+    if (p.date) return p.date === today;
     const pw = Number(p.weekday);
     return !pw || pw === wd;
   }).sort(function (a, b) {
@@ -1618,7 +1624,17 @@ function ensureQuizState(subject) {
       index: 0,
       submitting: false,
       report: null,
-      job: null
+      job: null,
+      examMode: false,
+      examTimeLimit: 0,
+      examDeadline: 0,
+      examTimer: null,
+      examWarned: false,
+      examForced: false,
+      examSuggestion: null,
+      examLoading: false,
+      answeringStartedAt: 0,
+      actualMinutes: null
     };
   } else if (subject) {
     state.quiz.subject = subject;
@@ -1632,6 +1648,7 @@ function resetQuizFlow() {
   const q = state.quiz;
   if (!q) return;
   if (q.job && q.job.requestId) abortAI(q.job.requestId);
+  stopExamTimer();
   q.step = 'setup';
   q.questions = [];
   q.answers = {};
@@ -1643,6 +1660,15 @@ function resetQuizFlow() {
   q.submitting = false;
   q.gen = { status: '', statusText: '', search: null, steps: {} };
   q.job = null;
+  q.examMode = false;
+  q.examTimeLimit = 0;
+  q.examDeadline = 0;
+  q.examWarned = false;
+  q.examForced = false;
+  q.examSuggestion = null;
+  q.examLoading = false;
+  q.answeringStartedAt = 0;
+  q.actualMinutes = null;
   state.quizGenText = '';
 }
 
@@ -1667,7 +1693,7 @@ function quizCount() {
 
 PAGES.quiz = function () {
   const q = ensureQuizState();
-  const stepMap = { setup: 0, generating: 2, answering: 3, submitting: 3, error: 2, done: 4 };
+  const stepMap = { setup: 0, generating: 2, ready: 3, answering: 3, submitting: 3, error: 2, done: 4 };
   const activeStep = stepMap[q.step] == null ? 0 : stepMap[q.step];
   const stepLabels = ['选择科目', '时长与意愿', '生成题目', '逐题作答', '查看报告'];
   const stepsHtml = stepLabels.map(function (label, idx) {
@@ -1679,6 +1705,7 @@ PAGES.quiz = function () {
   let body = '';
   if (q.step === 'setup') body = renderQuizSetup(q);
   else if (q.step === 'generating') body = renderQuizGenerating(q);
+  else if (q.step === 'ready') body = renderQuizReady(q);
   else if (q.step === 'answering') body = renderQuizAnswering(q);
   else if (q.step === 'submitting') body = renderQuizSubmitting(q);
   else if (q.step === 'error') body = renderQuizError(q);
@@ -1851,6 +1878,187 @@ function renderQuizGenerating(q) {
   '</div>';
 }
 
+/* ---------- 考试模式（计时 / 提醒 / 强制交卷） ---------- */
+function formatCountdown(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m + ':' + String(r).padStart(2, '0');
+}
+
+function renderQuizReady(q) {
+  const count = q.questions.length;
+  const loading = !!q.examLoading;
+  return '<div class="quiz-ready-wrap">' +
+    '<div class="card">' +
+      '<div class="card-head">' +
+        '<div><div class="card-title">' + icon('check') + '题目已生成 · ' + count + ' 道</div>' +
+        '<div class="card-sub">' + esc(q.subject) + ' · ' + esc(state.profile.grade || '八年级') +
+        ' · 可以开始考试（计时），也可以直接练习</div></div>' +
+      '</div>' +
+      '<div class="quiz-ready-list">' +
+        q.questions.map(function (it, i) {
+          const rawStem = String(it.stem || '').replace(/\$/g, '');
+          const preview = rawStem.slice(0, 70);
+          return '<div class="quiz-ready-item">' +
+            '<span class="quiz-ready-num">' + (i + 1) + '</span>' +
+            '<span class="quiz-ready-text">' + esc(preview) + (rawStem.length > 70 ? '…' : '') + '</span>' +
+            (it.knowledgePoint ? '<span class="tag">' + esc(it.knowledgePoint) + '</span>' : '') +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="banner banner-info mt-16">' + icon('clock') +
+        '<div><div class="banner-title">两种模式</div>' +
+        '<div class="banner-desc">「开始考试」由 AI 自动建议总时长并开始倒计时，' +
+        '<strong>最后 10% 的时间会提醒</strong>，时间到自动交卷（未作答的题按未作答处理）；' +
+        '「直接练习」不计时，随时提交。</div></div>' +
+      '</div>' +
+      '<div class="row wrap mt-16">' +
+        '<button class="btn btn-primary" data-act="quiz-start-exam"' + (loading ? ' disabled' : '') + '>' +
+          (loading ? '<span class="spinner spinner-sm"></span> 正在估算建议时长…' : icon('play') + '开始考试（计时）') + '</button>' +
+        '<button class="btn btn-secondary" data-act="quiz-start-practice"' + (loading ? ' disabled' : '') + '>' +
+          icon('edit') + '直接练习（不计时）</button>' +
+        '<button class="btn btn-ghost btn-sm" data-act="quiz-back-setup"' + (loading ? ' disabled' : '') + '>' +
+          icon('arrow-left') + '重新设置</button>' +
+      '</div>' +
+      (q.examSuggestion
+        ? '<p class="field-hint mt-12">建议时长：' + q.examSuggestion.minutes + ' 分钟' +
+          (q.examSuggestion.reason ? '（' + esc(q.examSuggestion.reason) + '）' : '') + '</p>'
+        : '') +
+    '</div>' +
+  '</div>';
+}
+
+function startExamTimer(minutes) {
+  const q = state.quiz;
+  if (!q) return;
+  stopExamTimer();
+  q.examTimeLimit = Math.max(60, Math.round(minutes * 60));
+  q.examDeadline = Date.now() + q.examTimeLimit * 1000;
+  q.examWarned = false;
+  q.examTimer = setInterval(tickExamTimer, 1000);
+  tickExamTimer();
+}
+
+function stopExamTimer() {
+  const q = state.quiz;
+  if (!q) return;
+  if (q.examTimer) {
+    clearInterval(q.examTimer);
+    q.examTimer = null;
+  }
+  q.examDeadline = 0;
+}
+
+function tickExamTimer() {
+  const q = state.quiz;
+  if (!q || !q.examDeadline) return;
+  const remain = Math.max(0, Math.round((q.examDeadline - Date.now()) / 1000));
+  const warnAt = Math.max(30, Math.round(q.examTimeLimit * 0.1));
+  const el = document.getElementById('exam-countdown');
+  if (el) {
+    el.textContent = formatCountdown(remain);
+    el.classList.toggle('is-warning', remain <= warnAt);
+  }
+  if (!q.examWarned && remain <= warnAt) {
+    q.examWarned = true;
+    toast('还剩 ' + Math.max(1, Math.ceil(remain / 60)) + ' 分钟，注意时间', 'warning', 6000);
+  }
+  if (remain <= 0) {
+    stopExamTimer();
+    q.examForced = true;
+    toast('考试时间到，已自动交卷', 'warning', 5000);
+    submitQuiz(true);
+  }
+}
+
+async function startExamFlow() {
+  const q = state.quiz;
+  if (!q || q.step !== 'ready' || q.examLoading) return;
+  if (!isConfigured()) {
+    toast('没有配置 API，无法生成建议时长；可以先直接练习', 'warning');
+    return;
+  }
+  q.examLoading = true;
+  render();
+  const suggestion = await requestExamTime(q);
+  q.examLoading = false;
+  q.examSuggestion = suggestion;
+  q.examMode = true;
+  q.step = 'answering';
+  q.index = 0;
+  q.answeringStartedAt = Date.now();
+  startExamTimer(suggestion.minutes);
+  render();
+  toast('开始考试：建议时长 ' + suggestion.minutes + ' 分钟' + (suggestion.local ? '（本地估算）' : ''), 'success', 4500);
+}
+
+function localExamMinutesClient(q) {
+  let mins = 0;
+  q.questions.forEach(function (it) {
+    const type = it.type === 'choice' ? 'choice' : it.type === 'short' ? 'short' : 'fill';
+    mins += type === 'choice' ? 1.5 : type === 'fill' ? 2.5 : 4;
+  });
+  return Math.max(5, Math.min(90, Math.round(mins + 3)));
+}
+
+function requestExamTime(q) {
+  const stats = { choice: 0, fill: 0, short: 0 };
+  q.questions.forEach(function (it) {
+    const t = it.type === 'choice' ? 'choice' : it.type === 'short' ? 'short' : 'fill';
+    stats[t] += 1;
+  });
+  return new Promise(function (resolve) {
+    let settled = false;
+    const done = function (val) {
+      if (settled) return;
+      settled = true;
+      resolve(val);
+    };
+    const fallback = function () {
+      done({ minutes: localExamMinutesClient(q), reason: '按题型估算', local: true });
+    };
+    const timer = setTimeout(fallback, 15000);
+    try {
+      startAI({
+        mode: 'examTime',
+        messages: [{ role: 'user', content: '请为这次 ' + q.subject + ' 练习建议一个总时长。' }],
+        context: {
+          subject: q.subject,
+          grade: state.profile.grade || '八年级',
+          quiz: {
+            questions: q.questions.map(function (it) { return { type: it.type, difficulty: it.difficulty }; }),
+            stats: stats
+          },
+          plannedMinutes: quizMinutes()
+        },
+        options: { deepThinking: false }
+      }, {
+        onDone: function (evt) {
+          clearTimeout(timer);
+          const json = evt.json || {};
+          const m = Number(json.minutes);
+          done({
+            minutes: isFinite(m) ? clamp(Math.round(m), 5, 90) : localExamMinutesClient(q),
+            reason: json.reason || '',
+            local: !isFinite(m)
+          });
+        },
+        onError: function () {
+          clearTimeout(timer);
+          fallback();
+        }
+      }).catch(function () {
+        clearTimeout(timer);
+        fallback();
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      fallback();
+    }
+  });
+}
+
 function renderQuizAnswering(q) {
   const total = q.questions.length;
   const idx = clamp(q.index, 0, total - 1);
@@ -1878,7 +2086,16 @@ function renderQuizAnswering(q) {
     inputHtml = '<textarea class="textarea q-textarea" data-bind="quiz.answer" data-qid="' + esc(item.id) + '" placeholder="写出你的思路和答案，AI 会看过程">' + esc(userAnswer) + '</textarea>';
   }
 
-  return '<div class="quiz-progress-bar">' +
+  const timerHtml = q.examMode && q.examDeadline
+    ? '<div class="exam-bar" id="exam-bar">' + icon('clock') +
+        '<span class="exam-bar-label">考试中</span>' +
+        '<span class="exam-countdown" id="exam-countdown">' +
+          formatCountdown(Math.max(0, Math.round((q.examDeadline - Date.now()) / 1000))) + '</span>' +
+        '<span class="exam-bar-hint">最后 10% 时间会提醒 · 到点自动交卷</span>' +
+      '</div>'
+    : '';
+
+  return timerHtml + '<div class="quiz-progress-bar">' +
       '<div class="bar"><div class="bar-fill" style="width:' + percent + '%"></div></div>' +
       '<div class="quiz-progress-text">第 ' + (idx + 1) + ' / ' + total + ' 题 · 已答 ' + answeredCount + '</div>' +
     '</div>' +
@@ -2153,13 +2370,15 @@ function onQuizDone(evt) {
   q.questions = parsed.questions;
   q.answers = {};
   q.index = 0;
-  q.step = 'answering';
-  q.answeringStartedAt = Date.now();
+  q.step = 'ready';
+  q.answeringStartedAt = 0;
+  q.examMode = false;
+  q.examForced = false;
   q.raw = evt.text || '';
   q.search = evt.search || null;
   q.gen.status = 'done';
   render();
-  toast('题目生成好了，共 ' + parsed.questions.length + ' 道', 'success');
+  toast('题目生成好了，共 ' + parsed.questions.length + ' 道，选择考试或直接练习', 'success', 4500);
 }
 
 function onQuizFailed(evt) {
@@ -2233,13 +2452,13 @@ function applyScoreBind(scope, path, el) {
   else if (path[0] === 'full') target.subjects[subject].full = value;
 }
 
-async function submitQuiz() {
+async function submitQuiz(force) {
   const q = state.quiz;
   if (!q || q.step !== 'answering') return;
   const unanswered = q.questions.filter(function (item) {
     return String(q.answers[item.id] || '').trim() === '';
   });
-  if (unanswered.length) {
+  if (unanswered.length && !force) {
     const ok = await confirmDialog({
       title: '还有题目没答',
       message: '还有 ' + unanswered.length + ' 道题没有作答，未答的题会按 0 分计算。确定要提交吗？',
@@ -2251,6 +2470,7 @@ async function submitQuiz() {
     toast('没有配置 API，无法生成批改报告', 'warning');
     return;
   }
+  stopExamTimer();
 
   q.step = 'submitting';
   q.submitting = true;
@@ -2398,7 +2618,7 @@ function buildReportFromDone(evt, q) {
     createdAt: Date.now(),
     mode: 'quiz',
     subject: q.subject,
-    plan: { minutes: quizMinutes(), willing: quizWilling(), custom: q.focus || '' },
+    plan: { minutes: quizMinutes(), willing: quizWilling(), custom: q.focus || '', mode: q.examMode ? 'exam' : 'practice' },
     duration: { planned: quizMinutes(), actual: q.actualMinutes || null },
     questions: questions,
     stats: stats,
@@ -2813,6 +3033,7 @@ PAGES.progress = function () {
   }) + '<div class="progress-layout">' +
     '<div class="progress-col">' +
       renderProgressCard() +
+      renderExamCard() +
       renderPlanCard() +
     '</div>' +
     '<div class="progress-col">' +
@@ -2871,7 +3092,7 @@ function renderPlanCard() {
             '<div class="list-icon">' + icon('clock') + '</div>' +
             '<div class="list-main">' +
               '<div class="list-title">' + esc(p.title || ((p.subject || '综合') + ' 学习')) + '</div>' +
-              '<div class="list-desc">' + esc(planWeekdayLabel(p.weekday)) + ' · ' + esc(p.time || '—') +
+              '<div class="list-desc">' + esc(p.date ? p.date : planWeekdayLabel(p.weekday)) + ' · ' + esc(p.time || '—') +
                 (p.minutes ? ' · ' + p.minutes + ' 分钟' : '') + ' · ' + esc(p.subject || '综合') +
                 (p.note ? ' · ' + esc(p.note) : '') + '</div>' +
             '</div>' +
@@ -2899,6 +3120,131 @@ function renderPlanCard() {
         '<input class="input" type="number" min="5" id="plan-minutes" value="30"></div>' +
       '<button class="btn btn-primary" data-act="add-plan">' + icon('plus') + '添加</button>' +
     '</div>' +
+  '</div>';
+}
+
+/* ---------- 考试复习计划 ---------- */
+function examDaysLeft(date) {
+  if (!date) return null;
+  const d = new Date(date + 'T23:59:59');
+  if (isNaN(d.getTime())) return null;
+  return Math.ceil((d.getTime() - Date.now()) / 86400000);
+}
+
+function renderExamCard() {
+  const exams = state.exams || [];
+  const form = state.examForm || { name: '', date: '', subjects: [], note: '' };
+  const formHtml =
+    '<div class="exam-form">' +
+      '<div class="add-row">' +
+        '<div class="field" style="max-width:220px"><label class="field-label">考试名称</label>' +
+          '<input class="input" id="exam-name" data-bind="examForm.name" value="' + esc(form.name) + '" placeholder="比如：期中考试 / 月考"></div>' +
+        '<div class="field" style="max-width:160px"><label class="field-label">考试日期</label>' +
+          '<input class="input" type="date" id="exam-date" data-bind="examForm.date" value="' + esc(form.date) + '"></div>' +
+      '</div>' +
+      '<div class="field mt-12"><label class="field-label">涉及科目（可多选）</label>' +
+        '<div class="subject-grid">' + SUBJECTS.map(function (sub) {
+          const active = form.subjects.indexOf(sub) >= 0;
+          return '<button class="subject-chip' + (active ? ' is-active' : '') + '" data-act="exam-toggle-subject" data-subject="' + sub + '">' +
+            subjectDot(sub) + esc(sub) + '</button>';
+        }).join('') + '</div>' +
+        '<span class="field-hint">考试要考、但你还没学到的内容，AI 会单独标成「未学课程」加进安排</span></div>' +
+      '<div class="field mt-12"><label class="field-label">补充说明（可选）</label>' +
+        '<input class="input" id="exam-note" data-bind="examForm.note" value="' + esc(form.note) + '" placeholder="比如：数学只考到第 4 章；英语重点作文"></div>' +
+      '<div class="row mt-12">' +
+        '<button class="btn btn-primary" data-act="exam-create">' + icon('sparkles') + '添加考试并生成复习计划</button>' +
+      '</div>' +
+    '</div>';
+
+  const listHtml = exams.length
+    ? exams.map(renderExamItem).join('')
+    : '<p class="field-hint">还没有考试计划。加一场考试，AI 会按你的进度排出每天复习什么，确认后直接进入每日安排。</p>';
+
+  return '<div class="card exam-card">' +
+    '<div class="card-head">' +
+      '<div><div class="card-title">' + icon('target') + '考试复习计划</div>' +
+      '<div class="card-sub">加考试 → AI 排计划 → 同意 / 部分同意 → 确认后进入每日安排</div></div>' +
+    '</div>' +
+    (exams.length ? '<div class="exam-list">' + listHtml + '</div>' : listHtml) +
+    '<div class="divider"></div>' +
+    formHtml +
+  '</div>';
+}
+
+function renderExamItem(exam) {
+  const days = examDaysLeft(exam.date);
+  const statusBadge =
+    exam.status === 'confirmed'
+      ? '<span class="badge badge-success">已加入每日安排</span>'
+      : exam.revised
+        ? '<span class="badge badge-warning">已按你的意见改好，待确认</span>'
+        : exam.status === 'generating'
+          ? '<span class="badge badge-primary">正在生成…</span>'
+          : '<span class="badge badge-primary">待确认计划</span>';
+
+  const plan = exam.plan || null;
+  let body = '';
+  if (exam.status === 'generating') {
+    body = '<div class="exam-plan-loading"><span class="spinner spinner-sm"></span> AI 正在结合你的进度安排复习内容…</div>';
+  } else if (plan && Array.isArray(plan.items) && plan.items.length) {
+    const itemsHtml = plan.items.map(function (it) {
+      const checked = !exam.agreedIds || exam.agreedIds.indexOf(it.id) >= 0;
+      return '<div class="exam-item">' +
+        (exam.partial
+          ? '<input type="checkbox" class="exam-check" data-act="exam-toggle-item" data-exam="' + esc(exam.id) + '" data-item="' + esc(it.id) + '"' + (checked ? ' checked' : '') + '>'
+          : '') +
+        '<div class="exam-item-main">' +
+          '<div class="exam-item-head">' +
+            '<span class="exam-item-date">' + esc(it.date || '未定日期') + '</span>' +
+            '<span class="badge">' + esc(it.subject) + '</span>' +
+            (it.isNewCourse ? '<span class="badge badge-warning">未学课程</span>' : '') +
+            '<span class="exam-item-min">' + (it.minutes || 25) + ' 分钟</span>' +
+          '</div>' +
+          '<div class="exam-item-title">' + esc(it.title) + '</div>' +
+          (it.reason ? '<div class="exam-item-reason">' + esc(it.reason) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    body = (plan.summary ? '<div class="exam-plan-summary">' + mdToHtml(plan.summary) + '</div>' : '') +
+      '<div class="exam-items">' + itemsHtml + '</div>' +
+      (exam.partial
+        ? '<div class="exam-feedback">' +
+            '<textarea class="textarea" id="exam-feedback" rows="3" placeholder="说说哪里不同意、想怎么改（比如：数学太多，每天只留一项；周末想多练科学）">' + esc(exam.feedback || '') + '</textarea>' +
+            '<div class="row mt-12">' +
+              '<button class="btn btn-primary btn-sm" data-act="exam-apply-feedback" data-exam="' + esc(exam.id) + '"' + (exam.revising ? ' disabled' : '') + '>' +
+                (exam.revising ? '正在改写…' : '按我的意见改写') + '</button>' +
+              '<button class="btn btn-ghost btn-sm" data-act="exam-cancel-partial" data-exam="' + esc(exam.id) + '">取消</button>' +
+            '</div>' +
+          '</div>'
+        : '');
+  } else {
+    body = '<p class="field-hint">这个考试还没有可用的计划，点「重新生成」让 AI 排一下。</p>';
+  }
+
+  const actions = [];
+  if (exam.status !== 'generating') {
+    if (exam.revised && !exam.partial) {
+      actions.push('<button class="btn btn-primary btn-sm" data-act="exam-confirm" data-exam="' + esc(exam.id) + '">' + icon('check') + '确认加入计划</button>');
+      actions.push('<button class="btn btn-ghost btn-sm" data-act="exam-regenerate" data-exam="' + esc(exam.id) + '">' + icon('refresh') + '重新生成</button>');
+    } else if (!exam.partial && exam.status !== 'confirmed') {
+      actions.push('<button class="btn btn-primary btn-sm" data-act="exam-agree-all" data-exam="' + esc(exam.id) + '">' + icon('check') + '同意全部，加入安排</button>');
+      actions.push('<button class="btn btn-secondary btn-sm" data-act="exam-partial" data-exam="' + esc(exam.id) + '">' + icon('edit') + '部分同意…</button>');
+      actions.push('<button class="btn btn-ghost btn-sm" data-act="exam-regenerate" data-exam="' + esc(exam.id) + '">' + icon('refresh') + '重新生成</button>');
+    }
+    actions.push('<button class="icon-btn is-danger" data-act="exam-delete" data-exam="' + esc(exam.id) + '" title="删除">' + icon('trash') + '</button>');
+  }
+
+  return '<div class="exam-item-card' + (exam.status === 'confirmed' ? ' is-confirmed' : '') + '">' +
+    '<div class="exam-item-top">' +
+      '<div class="exam-item-name">' + icon('target') + esc(exam.name) +
+        (days != null ? '<span class="exam-days">' + (days >= 0 ? '还有 ' + days + ' 天' : '已过期') + '</span>' : '') +
+        statusBadge +
+      '</div>' +
+      '<div class="exam-item-meta">' + esc((exam.subjects || []).join('、')) + (exam.date ? ' · ' + esc(exam.date) : '') + '</div>' +
+    '</div>' +
+    body +
+    (actions.length ? '<div class="row wrap mt-12">' + actions.join('') + '</div>' : '') +
   '</div>';
 }
 
@@ -4009,6 +4355,21 @@ ACTIONS['quiz-back-setup'] = function () {
   render();
 };
 
+ACTIONS['quiz-start-exam'] = function () {
+  startExamFlow();
+};
+
+ACTIONS['quiz-start-practice'] = function () {
+  const q = state.quiz;
+  if (!q || q.step !== 'ready') return;
+  q.examMode = false;
+  q.examForced = false;
+  q.step = 'answering';
+  q.index = 0;
+  q.answeringStartedAt = Date.now();
+  render();
+};
+
 ACTIONS['quiz-exit'] = async function () {
   const ok = await confirmDialog({
     title: '放弃本次练习？',
@@ -4061,6 +4422,299 @@ ACTIONS['export-report'] = function () {
 };
 
 /* 学习进度 */
+/* ---------- 考试复习计划：生成、反馈改写、确认加入安排 ---------- */
+function findExam(id) {
+  return (state.exams || []).find(function (e) { return e && e.id === id; });
+}
+
+function saveExams() {
+  return storeSet('exams', state.exams);
+}
+
+function examPlanLocal(exam) {
+  const subjects = (exam.subjects && exam.subjects.length ? exam.subjects : ['数学']).slice(0, 4);
+  const start = new Date();
+  const items = subjects.map(function (sub, i) {
+    const d = new Date(start.getTime() + (i % 3) * 86400000);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return {
+      id: 'ep' + (i + 1),
+      subject: sub,
+      title: '复习 ' + sub + ' 当前进度内容（重做例题 + 3 道同类题）',
+      date: y + '-' + m + '-' + day,
+      minutes: 25,
+      reason: 'AI 计划生成失败，先给基础安排，可以重新生成',
+      isNewCourse: false
+    };
+  });
+  return { summary: '本地基础计划：每天一科，重点放在当前进度内容上。', items: items };
+}
+
+function applyExamPlan(exam, plan, revised) {
+  exam.plan = plan || { summary: '', items: [] };
+  exam.agreedIds = (exam.plan.items || []).map(function (it) { return it.id; });
+  exam.status = 'draft';
+  exam.revised = !!revised;
+  exam.revising = false;
+  exam.partial = false;
+  saveExams();
+  render();
+}
+
+async function generateExamPlan(exam) {
+  exam.status = 'generating';
+  exam.revising = false;
+  render();
+  const finish = function (plan, revised) {
+    if (!findExam(exam.id)) return;
+    applyExamPlan(exam, plan, revised);
+    toast(revised ? '计划已按你的意见改写，确认后加入安排' : '复习计划生成好了，看看是否同意', 'success', 4500);
+  };
+  if (!isConfigured()) {
+    finish(examPlanLocal(exam), false);
+    return;
+  }
+  let settled = false;
+  const settle = function (plan, revised) {
+    if (settled) return;
+    settled = true;
+    finish(plan, revised);
+  };
+  const req = {
+    mode: 'examPlan',
+    messages: [{ role: 'user', content: '请为考试「' + exam.name + '」制定复习计划。' }],
+    context: {
+      exam: { name: exam.name, date: exam.date, subjects: exam.subjects, note: exam.note },
+      progress: state.progress,
+      dailyMinutes: Number(state.settings.learning.dailyMinutes) || 40,
+      today: todayStr()
+    },
+    options: { deepThinking: false }
+  };
+  try {
+    const job = await startAI(req, {
+      onDone: function (evt) {
+        const json = evt.json || {};
+        if (json && Array.isArray(json.items) && json.items.length) settle(json, false);
+        else settle(examPlanLocal(exam), false);
+      },
+      onError: function () {
+        settle(examPlanLocal(exam), false);
+      }
+    });
+    if (job) exam.job = job;
+  } catch (err) {
+    settle(examPlanLocal(exam), false);
+  }
+}
+
+async function reviseExamPlan(exam) {
+  const feedbackEl = document.getElementById('exam-feedback');
+  const note = (feedbackEl ? feedbackEl.value : exam.feedback || '').trim();
+  exam.feedback = note;
+  exam.partial = true;
+  const allItems = (exam.plan && exam.plan.items) || [];
+  const agreedIds = exam.agreedIds || allItems.map(function (it) { return it.id; });
+  const label = function (it) { return (it.date || '') + ' ' + it.subject + '：' + it.title; };
+  const agreed = allItems.filter(function (it) { return agreedIds.indexOf(it.id) >= 0; }).map(label);
+  const rejected = allItems.filter(function (it) { return agreedIds.indexOf(it.id) < 0; }).map(label);
+  if (!note && !rejected.length) {
+    toast('先勾掉不同意的条目，或者写一句修改意见', 'info');
+    return;
+  }
+  exam.revising = true;
+  render();
+  const req = {
+    mode: 'examRevise',
+    messages: [{ role: 'user', content: '请按我的意见修改复习计划。' }],
+    context: {
+      exam: { name: exam.name, date: exam.date, subjects: exam.subjects },
+      previous: exam.plan,
+      feedback: { agreed: agreed, rejected: rejected, note: note }
+    },
+    options: { deepThinking: false }
+  };
+  let settled = false;
+  const finish = function (plan) {
+    if (settled || !findExam(exam.id)) return;
+    settled = true;
+    applyExamPlan(exam, plan, true);
+    toast('已按你的意见改好，确认后加入安排', 'success', 4500);
+  };
+  try {
+    const job = await startAI(req, {
+      onDone: function (evt) {
+        const json = evt.json || {};
+        if (json && Array.isArray(json.items) && json.items.length) finish(json);
+        else {
+          exam.revising = false;
+          render();
+          toast('AI 没有给出可用计划，请重试', 'error');
+        }
+      },
+      onError: function () {
+        exam.revising = false;
+        render();
+        toast('改写失败，请重试', 'error');
+      }
+    });
+    if (job) exam.job = job;
+  } catch (err) {
+    exam.revising = false;
+    render();
+  }
+}
+
+function addExamItemsToPlans(exam, itemIds) {
+  const all = (exam.plan && exam.plan.items) || [];
+  const ids = Array.isArray(itemIds) && itemIds.length ? itemIds : all.map(function (it) { return it.id; });
+  const chosen = all.filter(function (it) { return ids.indexOf(it.id) >= 0; });
+  const existing = {};
+  (state.plans || []).forEach(function (p) {
+    if (p && p.examId === exam.id) existing[p.title] = true;
+  });
+  let added = 0;
+  chosen.forEach(function (it) {
+    const title = (it.isNewCourse ? '【新课程】' : '') + it.title;
+    if (existing[title]) return;
+    state.plans.push({
+      id: uid('plan'),
+      title: title,
+      subject: it.subject,
+      weekday: 0,
+      date: it.date || '',
+      time: '20:00',
+      minutes: it.minutes || 25,
+      note: '考试复习 · ' + exam.name + (it.isNewCourse ? ' · 未学课程' : ''),
+      type: 'exam',
+      examId: exam.id,
+      createdAt: Date.now()
+    });
+    added += 1;
+  });
+  state.plans.sort(function (a, b) { return String(a.time || '').localeCompare(String(b.time || '')); });
+  exam.status = 'confirmed';
+  exam.confirmedAt = Date.now();
+  exam.partial = false;
+  exam.revised = false;
+  exam.agreedIds = chosen.map(function (it) { return it.id; });
+  storeSet('plans', state.plans);
+  saveExams();
+  render();
+  toast('已加入每日安排 ' + added + ' 项', 'success', 4200);
+}
+
+ACTIONS['exam-toggle-subject'] = function (el) {
+  const sub = el.dataset.subject;
+  const form = state.examForm;
+  if (!form) return;
+  const i = form.subjects.indexOf(sub);
+  if (i >= 0) form.subjects.splice(i, 1);
+  else form.subjects.push(sub);
+  render();
+};
+
+ACTIONS['exam-create'] = async function () {
+  const form = state.examForm || { name: '', date: '', subjects: [], note: '' };
+  const nameEl = $('#exam-name');
+  const dateEl = $('#exam-date');
+  const noteEl = $('#exam-note');
+  if (nameEl) form.name = nameEl.value;
+  if (dateEl) form.date = dateEl.value;
+  if (noteEl) form.note = noteEl.value;
+  const name = String(form.name || '').trim();
+  const date = String(form.date || '').trim();
+  const note = String(form.note || '').trim();
+  const subjects = (form.subjects || []).slice();
+  if (!name) {
+    toast('先给考试起个名字', 'info');
+    return;
+  }
+  if (!subjects.length) {
+    toast('至少选一科吧', 'info');
+    return;
+  }
+  const exam = {
+    id: uid('exam'),
+    name: name,
+    date: date,
+    subjects: subjects,
+    note: note,
+    createdAt: Date.now(),
+    status: 'generating',
+    plan: null,
+    agreedIds: [],
+    feedback: '',
+    partial: false,
+    revised: false,
+    revising: false
+  };
+  state.exams.unshift(exam);
+  state.examForm = { name: '', date: '', subjects: [], note: '' };
+  await saveExams();
+  render();
+  generateExamPlan(exam);
+};
+
+ACTIONS['exam-agree-all'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  addExamItemsToPlans(exam, null);
+};
+
+ACTIONS['exam-partial'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  exam.partial = true;
+  exam.agreedIds = ((exam.plan && exam.plan.items) || []).map(function (it) { return it.id; });
+  render();
+};
+
+ACTIONS['exam-cancel-partial'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  exam.partial = false;
+  exam.revising = false;
+  render();
+};
+
+ACTIONS['exam-toggle-item'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  const id = el.dataset.item;
+  exam.agreedIds = exam.agreedIds || [];
+  const i = exam.agreedIds.indexOf(id);
+  if (el.checked && i < 0) exam.agreedIds.push(id);
+  else if (!el.checked && i >= 0) exam.agreedIds.splice(i, 1);
+};
+
+ACTIONS['exam-apply-feedback'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  reviseExamPlan(exam);
+};
+
+ACTIONS['exam-confirm'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  addExamItemsToPlans(exam, exam.agreedIds);
+};
+
+ACTIONS['exam-regenerate'] = function (el) {
+  const exam = findExam(el.dataset.exam);
+  if (!exam) return;
+  generateExamPlan(exam);
+};
+
+ACTIONS['exam-delete'] = async function (el) {
+  state.exams = (state.exams || []).filter(function (e) { return e.id !== el.dataset.exam; });
+  await saveExams();
+  render();
+  toast('已删除考试计划', 'info');
+};
+
 ACTIONS['add-plan'] = async function () {
   const weekday = Number(($('#plan-weekday') || {}).value || 0);
   const time = (($('#plan-time') || {}).value || '19:30').trim();
@@ -4538,8 +5192,11 @@ function handleBind(el, evt) {
     }
     return;
   }
-  if (root === 'progress') {
-    const subject = el.dataset.subject;
+  if (root === 'examForm') {
+    if (state.examForm) setPath(state.examForm, path, value);
+    return;
+  }
+  if (root === 'progress') {    const subject = el.dataset.subject;
     if (!subject) return;
     if (!state.progress[subject]) state.progress[subject] = { unit: '', percent: 0, note: '', updatedAt: Date.now() };
     const entry = state.progress[subject];
@@ -4573,7 +5230,9 @@ function onDocumentClick(evt) {
   const act = target.dataset.act;
   const fn = ACTIONS[act];
   if (!fn) return;
-  evt.preventDefault();
+  // checkbox 需要保留浏览器默认的勾选行为
+  const isCheckbox = target.tagName === 'INPUT' && target.type === 'checkbox';
+  if (!isCheckbox) evt.preventDefault();
   try {
     const result = fn(target, evt);
     if (result && typeof result.catch === 'function') {

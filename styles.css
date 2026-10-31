@@ -4914,3 +4914,236 @@ body.view-assistant .page {
 .md-table tr:nth-child(even) td {
   background: var(--card-2);
 }
+
+/* ---------- 考试模式（倒计时） ---------- */
+.exam-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.exam-bar .ico {
+  color: var(--primary);
+}
+
+.exam-bar-label {
+  font-weight: 650;
+  color: var(--text);
+}
+
+.exam-countdown {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.04em;
+}
+
+.exam-countdown.is-warning {
+  color: var(--warning);
+  animation: examPulse 1s ease-in-out infinite;
+}
+
+@keyframes examPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.exam-bar-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---------- 题目就绪页 ---------- */
+.quiz-ready-wrap {
+  max-width: 880px;
+}
+
+.quiz-ready-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-ready-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.quiz-ready-num {
+  flex: 0 0 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--card-3);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.quiz-ready-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 考试复习计划 ---------- */
+.exam-card {
+  margin-top: 18px;
+}
+
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.exam-item-card {
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.exam-item-card.is-confirmed {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.exam-item-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.exam-item-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text);
+  flex-wrap: wrap;
+}
+
+.exam-item-name .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+}
+
+.exam-days {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.exam-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.exam-plan-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.exam-plan-summary {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.75;
+  margin-bottom: 10px;
+}
+
+.exam-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exam-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-2);
+}
+
+.exam-check {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.exam-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-item-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.exam-item-date {
+  font-family: var(--font-mono);
+}
+
+.exam-item-min {
+  color: var(--muted);
+}
+
+.exam-item-title {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.exam-item-reason {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.exam-feedback {
+  margin-top: 12px;
+}
+
+.exam-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

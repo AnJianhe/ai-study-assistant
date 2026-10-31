@@ -72,6 +72,9 @@ function modeOf(system) {
   if (system.includes('出一套短练习')) return 'quiz'
   if (system.includes('批改并生成个性化学习报告')) return 'report'
   if (system.includes('补课 / 学习安排建议')) return 'plan'
+  if (system.includes('估算建议总时长')) return 'examTime'
+  if (system.includes('制定可执行的复习计划')) return 'examPlan'
+  if (system.includes('按学生反馈修改复习计划')) return 'examRevise'
   return 'chat'
 }
 
@@ -79,6 +82,25 @@ function answerFor(system) {
   const mode = modeOf(system)
   if (mode === 'quiz') return JSON.stringify(QUIZ, null, 2)
   if (mode === 'report') return JSON.stringify(REPORT, null, 2)
+  if (mode === 'examTime') return JSON.stringify({ minutes: 15, reason: '4 道题，按每题 2 分钟再留检查时间' })
+  if (mode === 'examPlan') {
+    return JSON.stringify({
+      summary: '先补当前进度，再练综合题。',
+      items: [
+        { subject: '数学', title: '复习 4.4 合并同类项（重做例题 + 3 道同类题）', date: new Date().toISOString().slice(0, 10), minutes: 25, reason: '当前进度，考试必考', isNewCourse: false },
+        { subject: '科学', title: '复习第 3 章 地球与地图（重点：等高线判读）', date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), minutes: 30, reason: '考试要考但还没学', isNewCourse: true }
+      ]
+    })
+  }
+  if (mode === 'examRevise') {
+    return JSON.stringify({
+      summary: '按你的意见：数学减量，周末加科学。',
+      items: [
+        { subject: '数学', title: '复习 4.4 合并同类项（只做 2 道例题）', date: new Date().toISOString().slice(0, 10), minutes: 15, reason: '按你要求减量', isNewCourse: false },
+        { subject: '科学', title: '周末专项：等高线判读 10 题', date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), minutes: 40, reason: '按你要求加科学', isNewCourse: false }
+      ]
+    })
+  }
   if (mode === 'plan') {
     return ['## 现状判断', '你缺的主要是「光的折射」这一节。', '', '## 补课顺序', '1. 先看课本折射规律', '2. 重做课件例题', '', '## 每天做什么', '- 第 1 天：读课本 + 画折射光路图（30 分钟）', '', '## 检查点', '- 能独立画出空气↔水的折射光路图'].join('\n')
   }
