@@ -3783,6 +3783,13 @@ async function sendChat() {
     inputEl.value = '';
     inputEl.focus();
   }
+  // 兜底：输入框重建/焦点切换时，旧元素的延迟事件可能把已发送的文本写回，稍后再清理一次
+  setTimeout(function () {
+    if (!state.chat.draft) {
+      const cur = document.getElementById('chat-input');
+      if (cur && cur.value.trim() === text) cur.value = '';
+    }
+  }, 80);
 
   const req = {
     mode: 'chat',
@@ -5323,7 +5330,9 @@ function handleBind(el, evt) {
   }
   if (root === 'chat') {
     if (path[0] === 'draft') {
-      // 输入框重绘后旧元素可能延迟触发 change，忽略这类事件，避免发送后草稿又"复活"
+      // 输入框重绘后旧元素可能延迟触发 change：元素已脱离文档、或不是当前输入框时一律忽略，
+      // 避免发送后草稿又"复活"
+      if (!el.isConnected) return;
       const current = document.getElementById('chat-input');
       if (current && el !== current) return;
       state.chat.draft = String(value || '');
