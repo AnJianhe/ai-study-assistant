@@ -5219,3 +5219,43 @@ body.view-assistant .page {
   color: var(--muted);
   line-height: 1.6;
 }
+
+/* ---------- Markdown 折叠块与分隔线 ---------- */
+.md-details {
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-2);
+  overflow: hidden;
+}
+
+.md-details > summary {
+  cursor: pointer;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--card-3);
+  user-select: none;
+}
+
+.md-details > summary:hover {
+  color: var(--primary);
+}
+
+.md-details-body {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text-2);
+}
+
+.md-details-body p {
+  margin: 6px 0;
+}
+
+.md-hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}

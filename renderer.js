@@ -401,6 +401,15 @@ function mdToHtml(src) {
     return '\u0001M' + (maths.length - 1) + '\u0001';
   });
   const blocks = [];
+  // AI 常用 <details><summary>答案</summary>…</details> 做"先做后看答案"的折叠块：
+  // 先抽出来，内部再按 Markdown 渲染，避免把 HTML 标签当成文字显示
+  const detailsBlocks = [];
+  s = s.replace(/<details\b[^>]*>\s*<summary>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, function (_m, summary, body) {
+    detailsBlocks.push({ summary: String(summary || '').trim(), body: String(body || '').trim() });
+    return '\u0002D' + (detailsBlocks.length - 1) + '\u0002';
+  });
+  // 分隔线（用占位符，避免被段落包裹）
+  s = s.replace(/^\s*---+\s*$/gm, '\u0003HR\u0003');
   s = esc(s);
   s = s.replace(/```[a-zA-Z0-9+#-]*\n?([\s\S]*?)```/g, function (_m, code) {
     blocks.push('<pre><code>' + code.replace(/\n$/, '') + '</code></pre>');
@@ -416,7 +425,19 @@ function mdToHtml(src) {
     const p = chunk.trim();
     if (!p) return '';
     if (/^\u0000\d+\u0000$/.test(p)) return p;
-    if (/^<(h4|blockquote|pre|ul|ol)/.test(p)) return p;
+    if (/^\u0002D\d+\u0002$/.test(p)) return p;
+    if (p === '\u0003HR\u0003') return '<hr class="md-hr">';
+    if (p.indexOf('\u0003HR\u0003') >= 0) {
+      const segs = p.split('\u0003HR\u0003');
+      const parts = [];
+      segs.forEach(function (seg, i) {
+        const t = seg.trim();
+        if (t) parts.push('<p>' + t.replace(/\n/g, '<br>') + '</p>');
+        if (i < segs.length - 1) parts.push('<hr class="md-hr">');
+      });
+      return parts.join('');
+    }
+    if (/^<(h4|blockquote|pre|ul|ol|hr)/.test(p)) return p;
     const lines = p.split('\n');
     // Markdown 表格：| a | b | 加 | --- | --- |
     if (lines.length >= 2 && /^\s*\|/.test(lines[0]) && /^\s*\|?[\s:|-]+\|/.test(lines[1])) {
@@ -445,9 +466,36 @@ function mdToHtml(src) {
         return '<li>' + l.replace(/^\d+[.、)]\s+/, '') + '</li>';
       }).join('') + '</ol>';
     }
+    // 混排：块里既有列表行又有普通行（AI 常这样写"题干 + 选项"），逐行分组渲染
+    const hasListLine = lines.some(function (l) { return /^[-*•]\s+/.test(l); });
+    if (hasListLine) {
+      const parts = [];
+      let listBuf = [];
+      const flushList = function () {
+        if (!listBuf.length) return;
+        parts.push('<ul>' + listBuf.map(function (l) { return '<li>' + l.replace(/^[-*•]\s+/, '') + '</li>'; }).join('') + '</ul>');
+        listBuf = [];
+      };
+      lines.forEach(function (l) {
+        if (/^[-*•]\s+/.test(l)) {
+          listBuf.push(l);
+        } else {
+          flushList();
+          if (l.trim()) parts.push('<p>' + l.trim() + '</p>');
+        }
+      });
+      flushList();
+      return parts.join('');
+    }
     return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
   }).filter(Boolean).join('');
   let out = html.replace(/\u0000(\d+)\u0000/g, function (_m, i) { return blocks[Number(i)] || ''; });
+  out = out.replace(/\u0002D(\d+)\u0002/g, function (_m, i) {
+    const d = detailsBlocks[Number(i)];
+    if (!d) return '';
+    return '<details class="md-details"><summary>' + richInline(d.summary) + '</summary>' +
+      '<div class="md-details-body">' + mdToHtml(d.body) + '</div></details>';
+  });
   out = out.replace(/\u0001M(\d+)\u0001/g, function (_m, i) {
     const item = maths[Number(i)];
     return item ? katexToHtml(item.tex, item.display) : '';
