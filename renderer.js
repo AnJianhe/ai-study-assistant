@@ -1168,6 +1168,10 @@ function navItem(route, iconName, label) {
     icon(iconName) + '<span class="nav-text">' + label + '</span></button>';
 }
 
+function webSearchEnabled() {
+  return !(state.settings && state.settings.ai && state.settings.ai.webSearch === false);
+}
+
 function updateSideMeta() {
   const tag = document.getElementById('brand-tag');
   if (tag) {
@@ -1565,8 +1569,8 @@ PAGES.home = function () {
             '<button class="btn btn-ghost btn-sm" data-act="nav" data-route="assistant">打开</button></div>' +
           '<p class="text-sm muted" style="line-height:1.75">不会的题、写不出的作文、记不住的知识点，都可以直接问。' +
           'AI 会先查你的教材和资料，再联网核对。</p>' +
-          '<div class="banner banner-success mt-12" style="padding:9px 12px">' + icon('globe') +
-            '<div class="banner-desc">联网搜索：已开启（强制）</div></div>' +
+          '<div class="banner ' + (webSearchEnabled() ? 'banner-success' : 'banner-info') + ' mt-12" style="padding:9px 12px">' + icon(webSearchEnabled() ? 'globe' : 'wifi-off') +
+            '<div class="banner-desc">联网搜索：' + (webSearchEnabled() ? '已开启' : '已关闭（可在设置里开启）') + '</div></div>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1877,8 +1881,8 @@ function renderQuizSetup(q) {
           '<button class="btn btn-primary btn-block btn-lg" data-act="quiz-start"' + (isConfigured() ? '' : ' disabled') + '>' +
             icon('sparkles') + '开始出题</button>' +
           (isConfigured() ? '' : '<p class="field-hint mt-8" style="text-align:center">配置 API 后才能生成题目</p>') +
-          '<div class="banner banner-success mt-12" style="padding:9px 12px">' + icon('globe') +
-            '<div class="banner-desc">联网搜索：已开启（强制）</div></div>' +
+          '<div class="banner ' + (webSearchEnabled() ? 'banner-success' : 'banner-info') + ' mt-12" style="padding:9px 12px">' + icon(webSearchEnabled() ? 'globe' : 'wifi-off') +
+            '<div class="banner-desc">联网搜索：' + (webSearchEnabled() ? '已开启' : '已关闭（可在设置里开启）') + '</div></div>' +
         '</div>' +
         '<div class="card">' +
           '<div class="card-title mb-8">' + icon('layers') + '教材版本</div>' +
@@ -1920,12 +1924,14 @@ function renderQuizGenerating(q) {
       '</div>' +
       '<div class="gen-steps mt-12" id="gen-steps">' + stepsHtml + '</div>' +
       (gen.search
-        ? '<div class="banner ' + (gen.search.ok ? 'banner-success' : 'banner-warning') + ' mt-12" style="padding:9px 12px">' +
-            icon(gen.search.ok ? 'globe' : 'wifi-off') +
+        ? '<div class="banner ' + (gen.search.provider === 'off' ? 'banner-info' : gen.search.ok ? 'banner-success' : 'banner-warning') + ' mt-12" style="padding:9px 12px">' +
+            icon(gen.search.provider === 'off' ? 'wifi-off' : gen.search.ok ? 'globe' : 'wifi-off') +
             '<div class="banner-desc" id="gen-search-desc">' +
-              (gen.search.ok
-                ? '已联网检索到 ' + ((gen.search.results && gen.search.results.length) || 0) + ' 条参考资料'
-                : '本轮联网检索失败：' + esc(gen.search.error || '网络不可用')) +
+              (gen.search.provider === 'off'
+                ? '联网搜索已关闭，本轮只依据教材和你的材料'
+                : gen.search.ok
+                  ? '已联网检索到 ' + ((gen.search.results && gen.search.results.length) || 0) + ' 条参考资料'
+                  : '本轮联网检索失败：' + esc(gen.search.error || '网络不可用')) +
             '</div></div>'
         : '') +
     '</div>' +
@@ -2280,7 +2286,7 @@ async function startQuizGeneration() {
         custom: q.focus || ''
       }
     },
-    options: { deepThinking: !!(state.settings.ai && state.settings.ai.deepThinking), webSearch: true }
+    options: { deepThinking: !!(state.settings.ai && state.settings.ai.deepThinking), webSearch: webSearchEnabled() }
   };
 
   const job = await startAI(req, {
@@ -2587,7 +2593,7 @@ async function submitQuiz(force) {
       actualMinutes: actualMinutes,
       plannedMinutes: quizMinutes()
     },
-    options: { deepThinking: false, webSearch: true }
+    options: { deepThinking: false, webSearch: webSearchEnabled() }
   };
 
   const job = await startAI(req, {
@@ -2839,7 +2845,11 @@ function renderReportDetail(report) {
       '<div class="report-hero-main">' +
         '<div class="report-hero-title">' + subjectDot(report.subject || '综合') + esc(report.subject || '综合') + ' 练习报告' +
           '<span class="badge badge-primary">' + esc(modeLabel(report.mode)) + '</span>' +
-          (search.ok ? '<span class="badge badge-success">' + icon('globe') + '联网已核对</span>' : '<span class="badge badge-warning">' + icon('wifi-off') + '联网检索失败</span>') +
+          (search.provider === 'off'
+            ? '<span class="badge">' + icon('wifi-off') + '联网搜索已关闭</span>'
+            : search.ok
+              ? '<span class="badge badge-success">' + icon('globe') + '联网已核对</span>'
+              : '<span class="badge badge-warning">' + icon('wifi-off') + '联网检索失败</span>') +
         '</div>' +
         '<div class="report-hero-desc">' + esc(fmtDate(report.createdAt)) +
           (plan.willing ? ' · 当时状态：' + esc(plan.willing) : '') +
@@ -3587,7 +3597,9 @@ PAGES.assistant = function () {
           '<span class="dot-sep"></span><span>先查教材，再联网核对</span></div>' +
       '</div>' +
       '<div class="assistant-badges">' +
-        '<span class="badge badge-success" title="联网搜索始终开启，不可关闭">' + icon('globe') + '联网搜索：已开启（强制）</span>' +
+        (webSearchEnabled()
+          ? '<span class="badge badge-success" title="联网搜索已开启，可在设置里关闭">' + icon('globe') + '联网搜索：已开启</span>'
+          : '<span class="badge" title="联网搜索已关闭，可在设置里开启">' + icon('wifi-off') + '联网搜索：已关闭</span>') +
         '<span class="badge ' + (chat.deepThinking ? 'badge-primary' : '') + '">' + icon('brain') + '深度思考：' + (chat.deepThinking ? '开' : '关') + '</span>' +
         (chat.messages.length ? '<button class="icon-btn" data-act="chat-clear" title="清空对话">' + icon('trash') + '</button>' : '') +
       '</div>' +
@@ -3652,7 +3664,9 @@ function renderChatMessage(msg) {
         msg.search.results.slice(0, 4).map(function (r) {
           return '<button class="msg-cite" data-act="open-url" data-url="' + esc(r.url || '') + '" title="' + esc(r.url || '') + '">' + icon('external') + '来源</button>';
         }).join('') + '</div>'
-    : '';
+    : msg.search && msg.search.provider === 'off'
+      ? '<div class="msg-search">' + icon('wifi-off') + '<span>本轮联网搜索已关闭，仅依据教材和你的材料</span></div>'
+      : '';
 
   const tools = [];
   if (!streaming) {
@@ -3780,7 +3794,7 @@ async function sendChat() {
     },
     options: {
       deepThinking: !!chat.deepThinking,
-      webSearch: true
+      webSearch: webSearchEnabled()
     }
   };
 
@@ -3979,7 +3993,7 @@ function renderSettingsApi(draft) {
     '<div class="settings-section-head">' +
       '<div><div class="settings-section-title">' + icon('search') + '联网搜索服务（可选）</div>' +
       '<div class="settings-section-desc">不填也能用：主进程会自动用内置的搜索兜底。填了自己的搜索 Key 结果会更稳定。' +
-      '注意：联网搜索始终开启，不能关闭。</div></div>' +
+      '联网搜索可以在「行为偏好」里随时开关。</div></div>' +
     '</div>' +
     '<div class="form-grid">' +
       '<div class="field"><label class="field-label">Tavily Key</label>' +
@@ -4101,8 +4115,8 @@ function renderSettingsBehavior(draft) {
     '</div>' +
     '<div class="switch-row">' +
       '<div><div class="switch-label">联网搜索</div>' +
-        '<div class="switch-desc">已开启（强制）：每次回答都会先检索网络，避免用过时知识。</div></div>' +
-      '<button class="switch is-on" disabled role="switch" aria-checked="true" title="联网搜索始终开启"></button>' +
+        '<div class="switch-desc">开启时每次回答都会先检索网络，避免用过时知识；关闭后只依据教材和你的材料。</div></div>' +
+      '<button class="switch' + (aiCfg.webSearch !== false ? ' is-on' : '') + '" data-act="toggle-setting" data-key="ai.webSearch" role="switch" aria-checked="' + (aiCfg.webSearch !== false ? 'true' : 'false') + '"></button>' +
     '</div>' +
   '</div>' +
   '<div class="card settings-section">' +
@@ -5473,7 +5487,7 @@ async function generateMakeupPlan(makeupId) {
         notes: item.note || ''
       }
     },
-    options: { deepThinking: false, webSearch: true }
+    options: { deepThinking: false, webSearch: webSearchEnabled() }
   };
 
   const job = await startAI(req, {
