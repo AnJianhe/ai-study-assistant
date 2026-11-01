@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.study.aiassistant'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.study.aiassistant'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.3.2-android.1'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // 只使用同步脚本生成的白名单资产，不把项目根目录直接打进 APK。
+    sourceSets.main.assets.setSrcDirs([layout.buildDirectory.dir('generated/studyAssets')])
+}
+
+// Node.js 不在 PATH 时，可用 -PstudyNode=/绝对路径/node 指定本机可执行文件。
+// 每次构建执行一次，确保生成的入口、桥接脚本与共享前端一致。
+def generateStudyAssets = tasks.register('generateStudyAssets', Exec) {
+    workingDir rootProject.projectDir.parentFile
+    commandLine providers.gradleProperty('studyNode').getOrElse('node'),
+            new File(rootProject.projectDir, 'scripts/sync-assets.js').absolutePath
+}
+
+tasks.named('preBuild').configure { dependsOn(generateStudyAssets) }
+tasks.configureEach { task ->
+    if (task.name.startsWith('merge') && task.name.endsWith('Assets')) {
+        task.dependsOn(generateStudyAssets)
+    }
+}
