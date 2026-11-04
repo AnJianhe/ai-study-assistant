@@ -1,6 +1,6 @@
 {
   "name": "ai-study-assistant",
-  "version": "1.3.5",
+  "version": "1.4.0",
   "description": "AI 个性化学习助手（浙江初中版）",
   "main": "main.js",
   "author": "AI Study Assistant",
@@ -26,7 +26,8 @@
       "styles.css",
       "lib/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/sql.js/**/*"
     ],
     "asar": true,
     "win": {
@@ -65,5 +66,8 @@
     "electron": "33.4.11",
     "electron-builder": "25.1.8",
     "katex": "^0.16.11"
+  },
+  "dependencies": {
+    "sql.js": "^1.15.2"
   }
 }

@@ -104,23 +104,34 @@ AI-Study-Assistant/
 │   ├── prompts.js          # 系统提示词与各模式指令（防幻觉规则）
 │   ├── retrieval.js        # 本地检索（BM25 近似）
 │   ├── search.js           # 联网搜索（Tavily/Serper/博查/Bing 兜底）
-│   ├── materials.js        # 上传材料管理
+│   ├── materials.js        # 上传材料管理（数据库优先）
 │   ├── textbooks.js        # 内置教材
 │   ├── quizbank.js         # 内置题库
 │   ├── settings.js         # 设置/档案/成绩归一化
-│   └── store.js            # JSON 原子存储
+│   ├── db.js               # SQLite 数据层（sql.js / WebAssembly）
+│   ├── migrate.js          # 旧版 JSON 数据 → 数据库的一次性迁移
+│   └── store.js            # 旧版 JSON 原子存储（数据库不可用时回退）
 ├── assets/
 │   ├── textbooks/          # 14 份内置教材（index.json + markdown）
-│   └── quizbank/           # 内置题库（70 题）
-├── scripts/                # 图标生成、自测、打包脚本（不打包进应用）
+│   ├── quizbank/           # 内置题库（70 题）
+│   └── vendor/             # KaTeX、sql.js 的 WASM 运行文件
+├── scripts/                # 图标生成、自测、验证、打包脚本（不打包进应用）
 ├── build/icon.ico          # 应用图标
 └── dist/                   # 打包输出（安装包）
 ```
 
-运行数据：`%APPDATA%\AI学习助手\data`
-- `settings.json` / `profile.json` / `scores.json`
-- `materials/`（index.json + uploads/）
-- `store.json`（进度、计划、请假、报告列表等）
+运行数据：`%APPDATA%\AIStudyAssistant\data`
+- `study.db`：**数据库文件，全部学习数据都在这里**（设置、成绩、进度、报告、聊天记录、上传资料和图片）
+- 首次启动会自动把旧的 `settings.json` / `store.json` / `materials/` 迁移进数据库；旧文件原样保留，不会删除
+
+### 数据备份与手机同步
+
+设置页 → 「数据与关于」：
+
+- **导出学习数据**：生成一个 `.db` 文件（含全部学习数据），可以放到手机、另一台电脑或云盘
+- **导入学习数据**：选择 `.db` 文件覆盖当前设备的数据，导入前会自动备份成 `study.db.bak-时间戳`
+
+同一个 `.db` 文件是标准 SQLite 格式，安卓端的系统 SQLite 也能直接打开，所以手机和电脑之间用这个文件来回倒就是同步。
 
 ## 七、开发与打包
 

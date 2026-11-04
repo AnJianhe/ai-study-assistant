@@ -81,6 +81,13 @@ const api = {
   dialog: {
     pickMaterial: () => invoke('dialog:pickMaterial'),
     pickImages: () => invoke('dialog:pickImages')
+  },
+  db: {
+    info: () => invoke('db:info')
+  },
+  backup: {
+    export: () => invoke('backup:export'),
+    import: () => invoke('backup:import')
   }
 }
 

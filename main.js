@@ -5,6 +5,8 @@ const fs = require('fs')
 const path = require('path')
 
 const { JsonFile, KeyValueStore, ensureDir, clone } = require('./lib/store')
+const { StudyDb } = require('./lib/db')
+const { migrateLegacyData } = require('./lib/migrate')
 const {
   normalizeSettings,
   normalizeProfile,
@@ -45,10 +47,60 @@ function logDebug() {
   }
 }
 
-const settingsFile = new JsonFile(path.join(DATA_DIR, 'settings.json'), normalizeSettings({}))
-const profileFile = new JsonFile(path.join(DATA_DIR, 'profile.json'), normalizeProfile({}))
-const scoresFile = new JsonFile(path.join(DATA_DIR, 'scores.json'), normalizeScores({}))
-const kvStore = new KeyValueStore(path.join(DATA_DIR, 'store.json'))
+// ---------- 数据库：全部学习数据存一个 .db 文件，便于备份和手机/电脑同步 ----------
+// 用 sql.js（WebAssembly），不依赖原生编译，Electron 里不会因 ABI 不匹配崩溃。
+const DB_FILE = path.join(DATA_DIR, 'study.db')
+let db = null
+let dbError = ''
+
+// 旧版 JSON 存储（数据库不可用时的回退）
+const jsonSettings = new JsonFile(path.join(DATA_DIR, 'settings.json'), normalizeSettings({}))
+const jsonProfile = new JsonFile(path.join(DATA_DIR, 'profile.json'), normalizeProfile({}))
+const jsonScores = new JsonFile(path.join(DATA_DIR, 'scores.json'), normalizeScores({}))
+const jsonStore = new KeyValueStore(path.join(DATA_DIR, 'store.json'))
+
+function recordRead(key, fallback) {
+  if (db) {
+    const value = db.get(key)
+    return value === null ? clone(fallback) : value
+  }
+  if (key === 'settings') return jsonSettings.read()
+  if (key === 'profile') return jsonProfile.read()
+  if (key === 'scores') return jsonScores.read()
+  return clone(fallback)
+}
+
+function recordWrite(key, data) {
+  if (db) {
+    db.set(key, data)
+    return data
+  }
+  if (key === 'settings') return jsonSettings.write(data)
+  if (key === 'profile') return jsonProfile.write(data)
+  if (key === 'scores') return jsonScores.write(data)
+  return data
+}
+
+const kvStore = {
+  get: (key) => (db ? db.get(key) : jsonStore.get(key)),
+  set: (key, value) => (db ? db.set(key, value) : jsonStore.set(key, value)),
+  remove: (key) => (db ? db.remove(key) : jsonStore.remove(key)),
+  list: (prefix) => (db ? db.keys(prefix) : jsonStore.list(prefix))
+}
+
+async function initDatabase() {
+  try {
+    db = await StudyDb.create(DB_FILE)
+    const migrated = migrateLegacyData({ db, dataDir: DATA_DIR })
+    materials.setDb(db)
+    logDebug('[db] 数据库就绪', DB_FILE, JSON.stringify(migrated))
+  } catch (err) {
+    dbError = err && err.message ? err.message : String(err)
+    db = null
+    logDebug('[db] 数据库不可用，回退到 JSON 存储:', dbError)
+  }
+}
+
 const textbooks = new TextbookLibrary(ASSETS_DIR)
 const materials = new MaterialStore(path.join(DATA_DIR, 'materials'))
 const retriever = new Retriever(textbooks, materials)
@@ -57,9 +109,9 @@ const bank = new QuizBank(ASSETS_DIR)
 let mainWindow = null
 
 const gateway = new AiGateway({
-  getSettings: () => normalizeSettings(settingsFile.read()),
-  getProfile: () => normalizeProfile(profileFile.read()),
-  getScores: () => normalizeScores(scoresFile.read()),
+  getSettings: () => normalizeSettings(recordRead('settings', normalizeSettings({}))),
+  getProfile: () => normalizeProfile(recordRead('profile', normalizeProfile({}))),
+  getScores: () => normalizeScores(recordRead('scores', normalizeScores({}))),
   getProgress: () => kvStore.get('progress') || {},
   retriever,
   materials,
@@ -216,8 +268,81 @@ function registerIpc() {
     today: new Date().toISOString().slice(0, 10),
     platform: process.platform,
     subjects: SUBJECTS,
-    textbookVersions: TEXTBOOK_VERSIONS
+    textbookVersions: TEXTBOOK_VERSIONS,
+    db: db
+      ? { enabled: true, path: DB_FILE, error: '', stats: db.stats() }
+      : { enabled: false, path: DB_FILE, error: dbError, stats: null }
   }))
+
+  // ---------- 数据备份 / 迁移（一个 .db 文件带走全部学习数据） ----------
+  ipcMain.handle('db:info', () => (db
+    ? { enabled: true, path: DB_FILE, error: '', stats: db.stats() }
+    : { enabled: false, path: DB_FILE, error: dbError, stats: null }))
+
+  ipcMain.handle('backup:export', async () => {
+    if (!db) throw new Error('数据库未启用（当前使用旧版文件存储），无法导出')
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    let targetPath = ''
+    // 仅本地开发/自动化测试：指定路径时跳过保存对话框（打包版不生效）
+    if (!app.isPackaged && process.env.STUDY_TEST_BACKUP_PATH) {
+      targetPath = process.env.STUDY_TEST_BACKUP_PATH
+    } else {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: '导出学习数据（可在手机或另一台电脑导入）',
+        defaultPath: path.join(app.getPath('documents'), 'AI学习助手-学习数据-' + stamp + '.db'),
+        filters: [{ name: '学习数据', extensions: ['db'] }]
+      })
+      if (result.canceled || !result.filePath) return null
+      targetPath = result.filePath
+    }
+    db.flush()
+    fs.copyFileSync(DB_FILE, targetPath)
+    const size = fs.statSync(targetPath).size
+    logDebug('[backup] 已导出', targetPath, size)
+    return { path: targetPath, size }
+  })
+
+  ipcMain.handle('backup:import', async () => {
+    if (!db) throw new Error('数据库未启用（当前使用旧版文件存储），无法导入')
+    let source = ''
+    if (!app.isPackaged && process.env.STUDY_TEST_IMPORT_PATH) {
+      source = process.env.STUDY_TEST_IMPORT_PATH
+    } else {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: '选择要导入的学习数据（.db）',
+        properties: ['openFile'],
+        filters: [{ name: '学习数据', extensions: ['db', 'sqlite', 'sqlite3'] }]
+      })
+      if (result.canceled || !result.filePaths.length) return null
+      source = result.filePaths[0]
+    }
+    const head = Buffer.alloc(16)
+    const fd = fs.openSync(source, 'r')
+    try {
+      fs.readSync(fd, head, 0, 16, 0)
+    } finally {
+      fs.closeSync(fd)
+    }
+    if (head.toString('utf8', 0, 15) !== 'SQLite format 3') {
+      throw new Error('这个文件不是学习数据数据库（请选择导出的 .db 文件）')
+    }
+    // 导入前先备份当前数据，出问题还能恢复
+    db.checkpoint()
+    const backup = DB_FILE + '.bak-' + Date.now()
+    if (fs.existsSync(DB_FILE)) fs.copyFileSync(DB_FILE, backup)
+    db.close()
+    fs.copyFileSync(source, DB_FILE)
+    for (const suffix of ['-wal', '-shm']) {
+      try { fs.unlinkSync(DB_FILE + suffix) } catch (_err) { /* 不存在则跳过 */ }
+    }
+    logDebug('[backup] 已导入', source, '旧库备份:', backup)
+    // 让新数据生效：短暂延迟后重启应用
+    setTimeout(() => {
+      app.relaunch()
+      app.exit(0)
+    }, 400)
+    return { imported: true, backupPath: backup }
+  })
 
   ipcMain.handle('app:openDataFolder', async () => {
     await shell.openPath(DATA_DIR)
@@ -230,28 +355,28 @@ function registerIpc() {
     return true
   })
 
-  ipcMain.handle('settings:get', () => normalizeSettings(settingsFile.read()))
+  ipcMain.handle('settings:get', () => normalizeSettings(recordRead('settings', normalizeSettings({}))))
 
   ipcMain.handle('settings:save', (_event, patch) => {
-    const current = normalizeSettings(settingsFile.read())
+    const current = normalizeSettings(recordRead('settings', normalizeSettings({})))
     const next = normalizeSettings(deepMerge(current, patch || {}))
-    settingsFile.write(next)
+    recordWrite('settings', next)
     return next
   })
 
-  ipcMain.handle('profile:get', () => normalizeProfile(profileFile.read()))
+  ipcMain.handle('profile:get', () => normalizeProfile(recordRead('profile', normalizeProfile({}))))
 
   ipcMain.handle('profile:save', (_event, profile) => {
     const next = normalizeProfile(profile || {})
-    profileFile.write(next)
+    recordWrite('profile', next)
     return next
   })
 
-  ipcMain.handle('scores:get', () => normalizeScores(scoresFile.read()))
+  ipcMain.handle('scores:get', () => normalizeScores(recordRead('scores', normalizeScores({}))))
 
   ipcMain.handle('scores:save', (_event, scores) => {
     const next = normalizeScores(scores || {})
-    scoresFile.write(next)
+    recordWrite('scores', next)
     return next
   })
 
@@ -425,9 +550,10 @@ if (!app.requestSingleInstanceLock()) {
     }
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     app.setAppUserModelId('com.study.aiassistant')
     Menu.setApplicationMenu(null)
+    await initDatabase()
     applyContentSecurityPolicy()
     registerIpc()
     createWindow()
@@ -439,5 +565,13 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
+  })
+
+  // 退出前把数据库缓冲区写回文件，保证 .db 是完整可拷贝的
+  app.on('before-quit', () => {
+    if (db) {
+      try { db.closeAndCheckpoint() } catch (_err) { /* 忽略关闭失败 */ }
+      db = null
+    }
   })
 }

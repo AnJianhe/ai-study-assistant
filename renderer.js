@@ -4197,19 +4197,28 @@ function renderSettingsBehavior(draft) {
 
 function renderSettingsData() {
   const info = state.appInfo || {};
+  const db = info.db || {};
+  const stats = db.stats || null;
   const rows = [
     { label: '应用版本', value: info.version || '1.0.0' },
     { label: '平台', value: info.platform || navigator.platform || 'Windows' },
     { label: '运行方式', value: info.packaged ? '安装版' : '开发版' },
+    { label: '数据存储', value: db.enabled ? '数据库（study.db）' : '旧版文件存储' },
     { label: '数据目录', value: info.userDataPath || '—' },
     { label: '本地报告', value: state.reports.length + ' 份' },
     { label: '上传材料', value: state.materials.length + ' 份' },
     { label: '今天日期', value: info.today || todayStr() }
   ];
+  if (stats) {
+    rows.push({ label: '材料体积', value: (Math.round((stats.materialBytes || 0) / 1048576 * 10) / 10) + ' MB' });
+  }
+  const dbHint = db.enabled
+    ? '全部学习数据（设置、成绩、进度、报告、聊天记录、上传资料和图片）都存在一个数据库文件里。导出后可以带到手机或另一台电脑导入。'
+    : (db.error ? '数据库未启用：' + db.error + '。当前仍使用旧版文件存储。' : '当前使用旧版文件存储。');
   return '<div class="card settings-section">' +
     '<div class="settings-section-head">' +
       '<div><div class="settings-section-title">' + icon('folder') + '数据与关于</div>' +
-      '<div class="settings-section-desc">所有数据都存在本机的数据目录里，不会上传到服务器。换电脑时把整个目录拷走即可。</div></div>' +
+      '<div class="settings-section-desc">' + esc(dbHint) + '</div></div>' +
     '</div>' +
     '<div class="data-grid">' + rows.map(function (r) {
       return '<div class="data-item"><div class="data-item-label">' + esc(r.label) + '</div>' +
@@ -4217,9 +4226,16 @@ function renderSettingsData() {
     }).join('') + '</div>' +
     '<div class="row mt-16">' +
       '<button class="btn btn-primary" data-act="open-data-folder">' + icon('folder') + '打开数据目录</button>' +
+      (db.enabled ? '<button class="btn btn-secondary" data-act="export-data">' + icon('download') + '导出学习数据</button>' +
+      '<button class="btn btn-secondary" data-act="import-data">' + icon('upload') + '导入学习数据</button>' : '') +
     '</div>' +
+    (db.enabled
+      ? '<div class="banner banner-info mt-16">' + icon('info') +
+        '<div class="banner-desc">换设备或同步到手机：点 <b>导出学习数据</b> 生成一个 .db 文件，传到另一台设备后点 <b>导入学习数据</b> 即可。<br>' +
+        '注意：导入会覆盖目标设备上的全部学习数据（导入前会自动备份当前数据库）。</div></div>'
+      : '') +
     '<div class="banner banner-neutral mt-16">' + icon('info') +
-      '<div class="banner-desc">备份提示：把 <b>' + esc(info.userDataPath || '数据目录') + '</b> 整个文件夹复制到新电脑的相同位置，就能带走全部设置、成绩和报告。</div></div>' +
+      '<div class="banner-desc">数据目录：<b>' + esc(info.userDataPath || '数据目录') + '</b></div></div>' +
   '</div>';
 }
 
@@ -4289,6 +4305,33 @@ ACTIONS['open-data-folder'] = async function () {
     await api.app.openDataFolder();
   } catch (err) {
     toast(err && err.message ? err.message : '打开数据目录失败', 'error');
+  }
+};
+
+ACTIONS['export-data'] = async function () {
+  try {
+    const result = await api.backup.export();
+    if (!result) return;
+    const mb = Math.round((result.size || 0) / 1048576 * 10) / 10;
+    toast('已导出学习数据（' + mb + ' MB）：' + result.path, 'success', 7000);
+  } catch (err) {
+    toast(err && err.message ? err.message : '导出失败', 'error', 6000);
+  }
+};
+
+ACTIONS['import-data'] = async function () {
+  const ok = await confirmDialog({
+    title: '导入学习数据',
+    message: '导入会用所选 .db 文件覆盖这台设备上的全部学习数据（导入前会自动备份当前数据库）。导入后应用会自动重启。确定继续吗？',
+    confirmText: '选择文件并导入'
+  });
+  if (!ok) return;
+  try {
+    const result = await api.backup.import();
+    if (!result) return;
+    toast('导入成功，正在重启应用…', 'success', 3000);
+  } catch (err) {
+    toast(err && err.message ? err.message : '导入失败', 'error', 6000);
   }
 };
 
