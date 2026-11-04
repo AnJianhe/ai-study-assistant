@@ -927,8 +927,9 @@ function openUploadDialog(options) {
       '<div class="upload-drop" data-act="upload-pick">' +
         '<div class="upload-drop-icon">' + icon('upload') + '</div>' +
         '<div><div class="upload-drop-title">选择文件上传</div>' +
-        '<div class="upload-drop-desc">上传后 AI 会把它当作参考资料，练习和问答时都能用到</div></div>' +
+        '<div class="upload-drop-desc">可以一次选多个文件，程序会排队逐个处理；上传后 AI 会把它当作参考资料</div></div>' +
       '</div>' +
+      '<div class="up-progress" id="up-progress" hidden></div>' +
     '</div>';
 
   openModal({
@@ -5286,73 +5287,131 @@ function suggestMaterialMeta(file, vals) {
   });
 }
 
+// 批量上传的进度列表：每个文件一行，标出等待 / 处理中 / 完成 / 失败。
+function showUploadProgress(items) {
+  const box = document.getElementById('up-progress');
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = items.map(function (item, i) {
+    return '<div class="up-progress-item" data-up-index="' + i + '">' +
+      '<span class="up-progress-mark">' + icon('clock') + '</span>' +
+      '<span class="up-progress-name">' + esc(item.name) + '</span>' +
+      '<span class="up-progress-state">等待中</span>' +
+    '</div>';
+  }).join('');
+  const btn = document.querySelector('[data-act="upload-pick"]');
+  if (btn) btn.disabled = true;
+}
+
+function setUploadProgress(index, status, text) {
+  const row = document.querySelector('[data-up-index="' + index + '"]');
+  if (!row) return;
+  row.className = 'up-progress-item is-' + status;
+  const mark = row.querySelector('.up-progress-mark');
+  const stateEl = row.querySelector('.up-progress-state');
+  if (mark) {
+    if (status === 'running') mark.innerHTML = '<span class="spinner spinner-sm"></span>';
+    else if (status === 'done') mark.innerHTML = icon('check');
+    else if (status === 'failed') mark.innerHTML = icon('alert-triangle');
+    else mark.innerHTML = icon('clock');
+  }
+  if (stateEl && text) stateEl.textContent = text;
+}
+
 async function pickAndAddMaterial() {
   const pick = state.pendingUpload;
   if (!pick) return;
   if (state.uploading) return;
   const vals = pick.getValues ? pick.getValues() : { kind: pick.kind, subject: pick.subject, aiName: pick.aiName };
-  let file = null;
+
+  let picked = null;
   try {
-    file = await api.dialog.pickMaterial();
+    picked = await api.dialog.pickMaterial();
   } catch (err) {
     toast(err && err.message ? err.message : '打开文件选择器失败', 'error');
     return;
   }
-  if (!file) return;
-  const ext = String(file.ext || (file.name || '').split('.').pop() || '').toLowerCase();
-  if (ext === 'pdf') {
-    toast('PDF 暂不支持解析，请截图后再上传', 'warning', 5200);
-    return;
-  }
-  const supported = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'txt', 'md', 'csv', 'json', 'pptx', 'docx', 'xlsx'];
-  if (ext && supported.indexOf(ext) === -1) {
-    toast('暂不支持 .' + ext + ' 格式：请上传图片、文本，或 .pptx / .docx / .xlsx（会自动转 Markdown）', 'warning', 5600);
-    return;
-  }
+  const files = Array.isArray(picked) ? picked : (picked ? [picked] : []);
+  if (!files.length) return;
 
-  let name = file.name;
-  let kind = vals.kind || file.kind || 'other';
-  let subject = vals.subject || '综合';
-  let aiMeta = null;
-  if (vals.aiName) {
-    state.uploading = true;
-    toast('AI 正在读材料内容，识别名称和类型…', 'info', 4200);
+  const supported = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'txt', 'md', 'markdown', 'log', 'csv', 'json', 'pptx', 'docx', 'xlsx'];
+  const items = files.map(function (file) {
+    const ext = String(file.ext || (file.name || '').split('.').pop() || '').toLowerCase();
+    let reason = file.error ? String(file.error) : '';
+    if (!reason && file.unsupported) reason = file.hint || '暂不支持该文件格式';
+    if (!reason && ext === 'pdf') reason = 'PDF 暂不支持解析，请截图后再上传';
+    if (!reason && ext && supported.indexOf(ext) === -1) {
+      reason = '暂不支持 .' + ext + ' 格式：请上传图片、文本，或 .pptx / .docx / .xlsx';
+    }
+    return { file: file, ext: ext, reason: reason, name: file.name || '未命名文件' };
+  });
+
+  state.uploading = true;
+  showUploadProgress(items);
+
+  const okList = [];
+  const failList = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.reason) {
+      failList.push({ name: item.name, reason: item.reason });
+      setUploadProgress(i, 'failed', item.reason);
+      continue;
+    }
     try {
-      aiMeta = await suggestMaterialMeta(file, vals);
-    } finally {
-      state.uploading = false;
-    }
-    if (aiMeta) {
-      if (aiMeta.name) name = aiMeta.name;
-      if (aiMeta.kind) kind = aiMeta.kind;
-      // 科目只在识别得更准（且与手动选择不同）时才覆盖
-      if (aiMeta.subject) subject = aiMeta.subject;
+      let name = item.file.name;
+      let kind = vals.kind || item.file.kind || 'other';
+      let subject = vals.subject || '综合';
+      if (vals.aiName) {
+        setUploadProgress(i, 'running', 'AI 识别中…');
+        const meta = await suggestMaterialMeta(item.file, vals);
+        if (meta) {
+          if (meta.name) name = meta.name;
+          if (meta.kind) kind = meta.kind;
+          if (meta.subject) subject = meta.subject;
+        }
+      }
+      setUploadProgress(i, 'running', '保存中…');
+      const mat = await api.materials.add({
+        name: name,
+        kind: kind,
+        subject: subject,
+        dataUrl: item.file.dataUrl,
+        text: item.file.text,
+        ext: item.ext
+      });
+      okList.push(mat);
+      setUploadProgress(i, 'done', name + ' · ' + materialKindLabel(kind));
+    } catch (err) {
+      const reason = err && err.message ? err.message : '上传失败';
+      failList.push({ name: item.name, reason: reason });
+      setUploadProgress(i, 'failed', reason);
     }
   }
 
-  try {
-    const mat = await api.materials.add({
-      name: name,
-      kind: kind,
-      subject: subject,
-      dataUrl: file.dataUrl,
-      text: file.text,
-      ext: ext
-    });
-    if (aiMeta && aiMeta.name) {
-      toast('已按 AI 识别结果保存：' + name + ' · ' + materialKindLabel(kind), 'success', 5200);
-    } else if (file.converted) {
-      toast('已把 ' + ext.toUpperCase() + ' 自动转成 Markdown（' + String(file.text || '').length + ' 字）并加入资料库', 'success', 5200);
-    } else {
-      toast('已上传：' + (mat && mat.name ? mat.name : file.name), 'success');
-    }
-    await refreshMaterials();
-    closeModal();
-    const cb = pick.onDone;
-    state.pendingUpload = null;
-    if (cb) cb(mat);
-  } catch (err) {
-    toast(err && err.message ? err.message : '上传失败', 'error');
+  await refreshMaterials();
+  state.uploading = false;
+
+  if (okList.length && !failList.length) {
+    toast('已上传 ' + okList.length + ' 个材料' + (items.length > 1 ? '（排队处理完成）' : ''), 'success', 4200);
+  } else if (okList.length) {
+    toast('已上传 ' + okList.length + ' 个，' + failList.length + ' 个没成功：' + failList[0].name + '（' + failList[0].reason + '）', 'warning', 6400);
+  } else if (failList.length) {
+    toast('上传失败：' + failList[0].name + '（' + failList[0].reason + '）', 'error', 6400);
+  }
+
+  const cb = pick.onDone;
+  if (cb) cb(okList);
+  if (!failList.length) {
+    // 留一点时间让用户看到"已完成"再自动收起
+    setTimeout(function () {
+      closeModal();
+      state.pendingUpload = null;
+    }, 900);
+  } else {
+    // 有失败时保留弹窗，按钮恢复可用，方便再选文件重试
+    const btn = document.querySelector('[data-act="upload-pick"]');
+    if (btn) btn.disabled = false;
   }
 }
 

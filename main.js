@@ -342,13 +342,28 @@ function registerIpc() {
   }
 
   ipcMain.handle('dialog:pickMaterial', async () => {
-    // 仅本地开发/自动化测试：用环境变量指定文件时跳过系统对话框（打包版不生效）
-    if (!app.isPackaged && process.env.STUDY_TEST_PICK_FILE) {
-      return buildPickedFile(process.env.STUDY_TEST_PICK_FILE)
+    // 仅本地开发/自动化测试：用环境变量指定文件时跳过系统对话框（打包版不生效）。
+    // STUDY_TEST_PICK_FILES 用分号分隔多个文件，方便测试多选排队。
+    const testPick = !app.isPackaged
+      ? (process.env.STUDY_TEST_PICK_FILES || process.env.STUDY_TEST_PICK_FILE)
+      : ''
+    if (testPick) {
+      return String(testPick).split(';').map((item) => item.trim()).filter(Boolean).slice(0, 10).map((filePath) => {
+        try {
+          return buildPickedFile(filePath)
+        } catch (err) {
+          return {
+            name: path.basename(filePath),
+            ext: path.extname(filePath).slice(1).toLowerCase(),
+            size: 0,
+            error: err && err.message ? err.message : String(err)
+          }
+        }
+      })
     }
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: '选择要上传的材料（图片 / 文本 / Office 文档）',
-      properties: ['openFile'],
+      title: '选择要上传的材料（可多选，图片 / 文本 / Office 文档）',
+      properties: ['openFile', 'multiSelections'],
       filters: [
         { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] },
         { name: '文本', extensions: ['txt', 'md', 'markdown', 'csv', 'json', 'log'] },
@@ -357,7 +372,21 @@ function registerIpc() {
       ]
     })
     if (result.canceled || !result.filePaths.length) return null
-    return buildPickedFile(result.filePaths[0])
+    // 一次最多 10 个；单个文件读取失败不影响其他文件，把错误挂在对应条目上。
+    const files = []
+    for (const filePath of result.filePaths.slice(0, 10)) {
+      try {
+        files.push(buildPickedFile(filePath))
+      } catch (err) {
+        files.push({
+          name: path.basename(filePath),
+          ext: path.extname(filePath).slice(1).toLowerCase(),
+          size: 0,
+          error: err && err.message ? err.message : String(err)
+        })
+      }
+    }
+    return files
   })
 
   ipcMain.handle('dialog:pickImages', async () => {

@@ -177,7 +177,9 @@ test('选择器结果校验、取消、文件类型、大小及原生错误', as
   let pick = await nextPick(f)
   assert.equal(pick.mode, 'material')
   f.event('files', pick.id, { files: [{ name: 'a.md', size: 4, text: '笔记' }] })
-  assert.equal((await p).text, '笔记')
+  const single = await p
+  assert.ok(Array.isArray(single))
+  assert.equal(single[0].text, '笔记')
   p = f.api.dialog.pickImages(); pick = await nextPick(f, 2)
   assert.equal(pick.mode, 'images')
   f.event('files', pick.id, { files: [{ name: 'c:\\secret\\a.png', size: 5, dataUrl: image }] })
@@ -187,16 +189,35 @@ test('选择器结果校验、取消、文件类型、大小及原生错误', as
   assert.deepEqual(plain(await p), [])
   p = f.api.dialog.pickMaterial(); pick = await nextPick(f, 4)
   f.event('files', pick.id, { files: [{ name: 'ppt.pptx', size: 1, unsupported: true, hint: '无法解析 Office' }] })
-  await assert.rejects(p, /无法解析 Office/)
+  const unsupported = await p
+  assert.match(unsupported[0].error, /无法解析 Office/)
   p = f.api.dialog.pickMaterial(); pick = await nextPick(f, 5)
   f.event('files', pick.id, { files: [{ name: 'big.txt', size: 12 * 1024 * 1024 + 1, text: 'a' }] })
-  await assert.rejects(p, /12MB/)
+  const tooBig = await p
+  assert.match(tooBig[0].error, /12MB/)
   p = f.api.dialog.pickMaterial(); pick = await nextPick(f, 6)
   f.event('error', pick.id, { message: '拒绝访问' })
   await assert.rejects(p, /拒绝访问/)
   p = f.api.dialog.pickMaterial(); pick = await nextPick(f, 7)
   f.event('files', pick.id, { files: [] })
   assert.equal(await p, null)
+})
+
+test('多选材料逐个校验：不合格的只标记自己，不影响其他文件', async () => {
+  const f = fixture({ onPick(id, mode, event) {
+    event('files', id, {
+      files: [
+        { name: '一.md', size: 4, text: '第一份' },
+        { name: '坏.pptx', size: 1, unsupported: true, hint: '无法解析 Office' },
+        { name: '三.md', size: 4, text: '第三份' }
+      ]
+    })
+  } })
+  const list = await f.api.dialog.pickMaterial()
+  assert.equal(list.length, 3)
+  assert.equal(list[0].text, '第一份')
+  assert.match(list[1].error, /无法解析 Office/)
+  assert.equal(list[2].text, '第三份')
 })
 
 test('网络包装仅发起应用请求，保留本地 fetch，流、状态和非成功响应可读取', async () => {
@@ -433,7 +454,8 @@ test('同步选择器回调、文件文本长度与附件格式校验', async ()
     event('files', id, { files: mode === 'images' ? [{ name: 'a.jpg', size: 5, dataUrl: image }] : [{ name: 'too-long.txt', size: 300001, text: 'x'.repeat(300001) }] })
   } })
   assert.equal((await f.api.dialog.pickImages())[0].size, 5)
-  await assert.rejects(f.api.dialog.pickMaterial(), /过大/)
+  const tooLong = await f.api.dialog.pickMaterial()
+  assert.match(tooLong[0].error, /过大/)
   await assert.rejects(f.api.ai.start({ messages: [{ images: ['data:image/png;base64,%%%'] }] }), /格式/)
 })
 

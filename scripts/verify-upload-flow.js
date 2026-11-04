@@ -28,7 +28,9 @@ async function main() {
   // 测试实例通过 STUDY_TEST_PICK_FILE 让主进程直接返回指定文件，
   // 不需要操作真实的系统文件对话框。
   const testFile = await evaluate(send, `(async () => {
-    const f = await window.api.dialog.pickMaterial();
+    const picked = await window.api.dialog.pickMaterial();
+    const list = Array.isArray(picked) ? picked : (picked ? [picked] : []);
+    const f = list[0];
     return f ? { name: f.name, ext: f.ext, hasText: typeof f.text === 'string' } : null;
   })()`)
   if (!testFile) {

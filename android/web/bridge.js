@@ -405,6 +405,23 @@
     })
   }
 
+  // 多选时逐个校验：单个文件不合格只标记它自己，不影响同一批里的其他文件。
+  function pickedFiles(files, imageOnly, max) {
+    const list = (Array.isArray(files) ? files : []).slice(0, max || 10)
+    return list.map((file) => {
+      try {
+        return pickedFile(file, imageOnly)
+      } catch (err) {
+        return {
+          name: String((file && file.name) || '未命名文件').split(/[\\/]/).pop(),
+          ext: String((file && file.name) || '').split('.').pop().toLowerCase(),
+          size: 0,
+          error: err && err.message ? err.message : '文件不可用'
+        }
+      }
+    })
+  }
+
   function getStore() { return record(readJson('data/store.json', {}), 'store.json') }
   const store = {
     get(key) { const data = getStore(); return Object.prototype.hasOwnProperty.call(data, String(key)) ? clone(data[String(key)]) : null },
@@ -503,6 +520,6 @@
     bank: { list: async (subject) => clone((await loadBank()).list(subject)) },
     ai: { start: call(startAI), abort: call(abortAI), onEvent(listener) { if (typeof listener !== 'function') throw new TypeError('监听器必须为函数'); aiListeners.add(listener); return () => aiListeners.delete(listener) } },
     store: { get: call((v) => store.get(v)), set: call((k, v) => store.set(k, v)), remove: call((v) => store.remove(v)), list: call((v) => store.list(v)) },
-    dialog: { pickMaterial: async () => { const files = await pick('material'); return files.length ? pickedFile(files[0], false) : null }, pickImages: async () => (await pick('images')).slice(0, 6).map((file) => pickedFile(file, true)) }
+    dialog: { pickMaterial: async () => { const files = await pick('material'); return files.length ? pickedFiles(files, false, 10) : null }, pickImages: async () => pickedFiles((await pick('images')).slice(0, 6), true, 6) }
   }
 })(window)

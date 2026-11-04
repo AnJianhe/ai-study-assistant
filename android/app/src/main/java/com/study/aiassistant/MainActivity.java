@@ -98,6 +98,9 @@ public final class MainActivity extends Activity {
     private static final int MAX_RESPONSE_CHARS = 16 * 1024 * 1024;
     private static final int MAX_REQUESTS = 8;
     private static final int MAX_PICK_COUNT = 20;
+    private static final int MAX_MATERIAL_COUNT = 10;
+    // 一次多选可用的总字节数（单个文件另有 12 MiB 上限）
+    private static final int MAX_PICK_TOTAL_BYTES = 20 * 1024 * 1024;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService networkPool = new ThreadPoolExecutor(MAX_REQUESTS, MAX_REQUESTS,
@@ -836,7 +839,8 @@ public final class MainActivity extends Activity {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("images".equals(mode) ? "image/*" : "*/*");
-            if ("images".equals(mode)) intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            // 两种模式都允许多选：材料一次最多 10 个，图片上限在下方按数量截断
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivityForResult(intent, PICK_REQUEST);
         } catch (ActivityNotFoundException | SecurityException ignored) {
@@ -869,9 +873,10 @@ public final class MainActivity extends Activity {
                 }
             } else if (data.getData() != null) uris.add(data.getData());
         }
-        if (uris.size() > MAX_PICK_COUNT || ("material".equals(mode) && uris.size() > 1)) {
+        if (uris.size() > MAX_PICK_COUNT
+                || ("material".equals(mode) && uris.size() > MAX_MATERIAL_COUNT)) {
             JSONObject failure = event("error", id);
-            put(failure, "message", "选择的文件过多。");
+            put(failure, "message", "material".equals(mode) ? "一次最多选择 10 个材料。" : "选择的文件过多。");
             postEvent(failure.toString());
             return;
         }
@@ -886,7 +891,7 @@ public final class MainActivity extends Activity {
 
     private void collectFiles(String id, String mode, List<Uri> uris) {
         JSONArray files = new JSONArray();
-        int remaining = MAX_PICK_BYTES; // 一次选择的全部文件合计上限 12 MiB。
+        int remaining = MAX_PICK_TOTAL_BYTES; // 一次选择的全部文件合计上限
         for (Uri uri : uris) {
             FileInfo info = queryInfo(uri);
             JSONObject item = new JSONObject();
@@ -905,7 +910,7 @@ public final class MainActivity extends Activity {
             if (imageMime == null && ((!text && !office) || "images".equals(mode))) {
                 unsupported(item, "不支持此格式；PDF 或旧版 Office 请转为文字或截图后上传。");
             } else if (info.size > remaining || info.size > MAX_PICK_BYTES) {
-                unsupported(item, "单次选择的文件总大小不能超过 12 MB。");
+                unsupported(item, "单个文件不能超过 12 MB，且一次选择的文件合计不能超过 20 MB。");
             } else {
                 try (InputStream input = getContentResolver().openInputStream(uri)) {
                     if (input == null) throw new IOException("unavailable");
