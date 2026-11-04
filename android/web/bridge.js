@@ -501,7 +501,7 @@
   const call = (fn) => (...args) => Promise.resolve().then(() => fn(...args))
   window.api = {
     app: {
-      info: call(() => ({ version: '1.3.2-android.1', userDataPath: '安卓应用私有目录', dataPath: '应用私有目录/data', packaged: true, today: new Date().toISOString().slice(0, 10), platform: 'android', subjects: clone(core().SUBJECTS), textbookVersions: clone(core().TEXTBOOK_VERSIONS) })),
+      info: call(() => ({ version: '1.3.4-android.1', userDataPath: '安卓应用私有目录', dataPath: '应用私有目录/data', packaged: true, today: new Date().toISOString().slice(0, 10), platform: 'android', subjects: clone(core().SUBJECTS), textbookVersions: clone(core().TEXTBOOK_VERSIONS) })),
       openDataFolder: call(() => { throw new Error('安卓应用私有数据目录不能直接打开') }),
       openExternal: call((value) => {
         const url = String(value || '')
