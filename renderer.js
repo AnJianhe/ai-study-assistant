@@ -927,7 +927,7 @@ function openUploadDialog(options) {
       '<div class="upload-drop" data-act="upload-pick">' +
         '<div class="upload-drop-icon">' + icon('upload') + '</div>' +
         '<div><div class="upload-drop-title">选择文件上传</div>' +
-        '<div class="upload-drop-desc">可以一次选多个文件，程序会排队逐个处理；上传后 AI 会把它当作参考资料</div></div>' +
+        '<div class="upload-drop-desc">可以一次选多个文件（数量不限），程序会排队逐个处理；上传后 AI 会把它当作参考资料</div></div>' +
       '</div>' +
       '<div class="up-progress" id="up-progress" hidden></div>' +
     '</div>';

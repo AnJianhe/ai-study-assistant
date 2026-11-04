@@ -407,7 +407,8 @@
 
   // 多选时逐个校验：单个文件不合格只标记它自己，不影响同一批里的其他文件。
   function pickedFiles(files, imageOnly, max) {
-    const list = (Array.isArray(files) ? files : []).slice(0, max || 10)
+    const raw = Array.isArray(files) ? files : []
+    const list = max > 0 ? raw.slice(0, max) : raw
     return list.map((file) => {
       try {
         return pickedFile(file, imageOnly)
@@ -501,7 +502,7 @@
   const call = (fn) => (...args) => Promise.resolve().then(() => fn(...args))
   window.api = {
     app: {
-      info: call(() => ({ version: '1.3.4-android.1', userDataPath: '安卓应用私有目录', dataPath: '应用私有目录/data', packaged: true, today: new Date().toISOString().slice(0, 10), platform: 'android', subjects: clone(core().SUBJECTS), textbookVersions: clone(core().TEXTBOOK_VERSIONS) })),
+      info: call(() => ({ version: '1.3.5-android.1', userDataPath: '安卓应用私有目录', dataPath: '应用私有目录/data', packaged: true, today: new Date().toISOString().slice(0, 10), platform: 'android', subjects: clone(core().SUBJECTS), textbookVersions: clone(core().TEXTBOOK_VERSIONS) })),
       openDataFolder: call(() => { throw new Error('安卓应用私有数据目录不能直接打开') }),
       openExternal: call((value) => {
         const url = String(value || '')
@@ -520,6 +521,6 @@
     bank: { list: async (subject) => clone((await loadBank()).list(subject)) },
     ai: { start: call(startAI), abort: call(abortAI), onEvent(listener) { if (typeof listener !== 'function') throw new TypeError('监听器必须为函数'); aiListeners.add(listener); return () => aiListeners.delete(listener) } },
     store: { get: call((v) => store.get(v)), set: call((k, v) => store.set(k, v)), remove: call((v) => store.remove(v)), list: call((v) => store.list(v)) },
-    dialog: { pickMaterial: async () => { const files = await pick('material'); return files.length ? pickedFiles(files, false, 10) : null }, pickImages: async () => pickedFiles((await pick('images')).slice(0, 6), true, 6) }
+    dialog: { pickMaterial: async () => { const files = await pick('material'); return files.length ? pickedFiles(files, false) : null }, pickImages: async () => pickedFiles((await pick('images')).slice(0, 6), true, 6) }
   }
 })(window)

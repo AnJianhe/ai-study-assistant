@@ -98,7 +98,6 @@ public final class MainActivity extends Activity {
     private static final int MAX_RESPONSE_CHARS = 16 * 1024 * 1024;
     private static final int MAX_REQUESTS = 8;
     private static final int MAX_PICK_COUNT = 20;
-    private static final int MAX_MATERIAL_COUNT = 10;
     // 一次多选可用的总字节数（单个文件另有 12 MiB 上限）
     private static final int MAX_PICK_TOTAL_BYTES = 20 * 1024 * 1024;
 
@@ -873,10 +872,10 @@ public final class MainActivity extends Activity {
                 }
             } else if (data.getData() != null) uris.add(data.getData());
         }
-        if (uris.size() > MAX_PICK_COUNT
-                || ("material".equals(mode) && uris.size() > MAX_MATERIAL_COUNT)) {
+        // 材料数量不设上限（单文件与合计大小仍有限制）；图片一次最多 20 张
+        if ("images".equals(mode) && uris.size() > MAX_PICK_COUNT) {
             JSONObject failure = event("error", id);
-            put(failure, "message", "material".equals(mode) ? "一次最多选择 10 个材料。" : "选择的文件过多。");
+            put(failure, "message", "选择的图片过多。");
             postEvent(failure.toString());
             return;
         }

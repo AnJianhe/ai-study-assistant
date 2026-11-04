@@ -348,7 +348,7 @@ function registerIpc() {
       ? (process.env.STUDY_TEST_PICK_FILES || process.env.STUDY_TEST_PICK_FILE)
       : ''
     if (testPick) {
-      return String(testPick).split(';').map((item) => item.trim()).filter(Boolean).slice(0, 10).map((filePath) => {
+      return String(testPick).split(';').map((item) => item.trim()).filter(Boolean).map((filePath) => {
         try {
           return buildPickedFile(filePath)
         } catch (err) {
@@ -372,9 +372,9 @@ function registerIpc() {
       ]
     })
     if (result.canceled || !result.filePaths.length) return null
-    // 一次最多 10 个；单个文件读取失败不影响其他文件，把错误挂在对应条目上。
+    // 数量不设上限；单个文件读取失败不影响其他文件，把错误挂在对应条目上。
     const files = []
-    for (const filePath of result.filePaths.slice(0, 10)) {
+    for (const filePath of result.filePaths) {
       try {
         files.push(buildPickedFile(filePath))
       } catch (err) {
