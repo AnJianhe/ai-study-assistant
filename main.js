@@ -297,19 +297,8 @@ function registerIpc() {
 
   ipcMain.handle('ai:abort', (_event, requestId) => gateway.abort(String(requestId)))
 
-  ipcMain.handle('dialog:pickMaterial', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: '选择要上传的材料（图片 / 文本 / Office 文档）',
-      properties: ['openFile'],
-      filters: [
-        { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] },
-        { name: '文本', extensions: ['txt', 'md', 'markdown', 'csv', 'json', 'log'] },
-        { name: 'Office 文档（自动转 Markdown）', extensions: ['pptx', 'docx', 'xlsx'] },
-        { name: '所有文件', extensions: ['*'] }
-      ]
-    })
-    if (result.canceled || !result.filePaths.length) return null
-    const filePath = result.filePaths[0]
+  // 把选中的文件读成渲染层需要的结构（图片转 dataUrl、Office 转 Markdown）
+  function buildPickedFile(filePath) {
     const stat = fs.statSync(filePath)
     const ext = path.extname(filePath).slice(1).toLowerCase()
     const name = path.basename(filePath)
@@ -350,6 +339,25 @@ function registerIpc() {
       unsupported: true,
       hint: 'PDF 暂不支持直接解析：请截图后以图片上传，或复制文本粘贴。Word/PPT/Excel 请上传 .docx/.pptx/.xlsx 自动转 Markdown。'
     }
+  }
+
+  ipcMain.handle('dialog:pickMaterial', async () => {
+    // 仅本地开发/自动化测试：用环境变量指定文件时跳过系统对话框（打包版不生效）
+    if (!app.isPackaged && process.env.STUDY_TEST_PICK_FILE) {
+      return buildPickedFile(process.env.STUDY_TEST_PICK_FILE)
+    }
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '选择要上传的材料（图片 / 文本 / Office 文档）',
+      properties: ['openFile'],
+      filters: [
+        { name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] },
+        { name: '文本', extensions: ['txt', 'md', 'markdown', 'csv', 'json', 'log'] },
+        { name: 'Office 文档（自动转 Markdown）', extensions: ['pptx', 'docx', 'xlsx'] },
+        { name: '所有文件', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || !result.filePaths.length) return null
+    return buildPickedFile(result.filePaths[0])
   })
 
   ipcMain.handle('dialog:pickImages', async () => {

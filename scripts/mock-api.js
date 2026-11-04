@@ -3,6 +3,8 @@
 const http = require('http')
 
 const PORT = Number(process.env.MOCK_PORT || 18080)
+// 测试开关：MOCK_QUIZ_COUNT 生成指定数量题目（用于长输出/截断测试）。
+const QUIZ_COUNT = Number(process.env.MOCK_QUIZ_COUNT || 0)
 
 const QUIZ = {
   title: '光的折射 · 15 分钟小练',
@@ -75,12 +77,29 @@ function modeOf(system) {
   if (system.includes('估算建议总时长')) return 'examTime'
   if (system.includes('制定可执行的复习计划')) return 'examPlan'
   if (system.includes('按学生反馈修改复习计划')) return 'examRevise'
+  if (system.includes('给学生上传的学习材料起名')) return 'materialMeta'
   return 'chat'
+}
+
+function quizAnswer() {
+  if (!QUIZ_COUNT) return JSON.stringify(QUIZ, null, 2)
+  const questions = []
+  for (let i = 0; i < QUIZ_COUNT; i++) {
+    const base = QUIZ.questions[i % QUIZ.questions.length]
+    questions.push(Object.assign({}, base, {
+      id: 'q' + (i + 1),
+      stem: base.stem + '（第 ' + (i + 1) + ' 题，用于长输出测试）'
+    }))
+  }
+  return JSON.stringify({ title: QUIZ.title, questions }, null, 2)
 }
 
 function answerFor(system) {
   const mode = modeOf(system)
-  if (mode === 'quiz') return JSON.stringify(QUIZ, null, 2)
+  if (mode === 'quiz') return quizAnswer()
+  if (mode === 'materialMeta') {
+    return JSON.stringify({ name: '科学_光的折射', kind: 'paper', subject: '科学', reason: '含题号与答题栏，判断为试卷' })
+  }
   if (mode === 'report') return JSON.stringify(REPORT, null, 2)
   if (mode === 'examTime') return JSON.stringify({ minutes: 15, reason: '4 道题，按每题 2 分钟再留检查时间' })
   if (mode === 'examPlan') {

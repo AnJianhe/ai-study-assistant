@@ -121,6 +121,10 @@ const DEFAULT_SETTINGS = {
   ui: { theme: 'dark' }
 };
 
+// 出题时 AI 输出的字符上限：6 道题带解析通常在 3000–8000 字，
+// 留足余量；真超限也只停止生成并继续用已收到的内容解析，不会卡住界面。
+const QUIZ_STREAM_LIMIT = 16000;
+
 const DEFAULT_PROFILE = {
   name: '',
   grade: '八年级',
@@ -179,7 +183,9 @@ const state = {
   },
   welcome: { step: 1 },
   drafts: { settings: null, profile: null, scores: null },
-  ui: { settingsDirty: false }
+  ui: { settingsDirty: false },
+  uploading: false,
+  pendingUpload: null
 };
 
 /* ============================================================
@@ -886,6 +892,8 @@ function openUploadDialog(options) {
   ];
   let kind = opts.kind || 'handout';
   let subject = opts.subject || state.quiz && state.quiz.subject || '数学';
+  // 默认开启：上传后由 AI 读内容起名并判断类型；失败会自动退回原文件名和手动选择。
+  let aiName = opts.aiName !== false;
 
   const body =
     '<div class="stack" style="gap:14px">' +
@@ -903,6 +911,13 @@ function openUploadDialog(options) {
             }).join('') +
           '</select></div>' +
       '</div>' +
+      '<label class="ai-name-row" for="up-ai-name">' +
+        '<input type="checkbox" id="up-ai-name"' + (aiName ? ' checked' : '') + '>' +
+        '<span class="ai-name-text">' +
+          '<span class="ai-name-title">由 AI 自动生成描述性文件名</span>' +
+          '<span class="ai-name-desc">上传后先读文件内容，命名成「科目_知识点」，并按内容自动判断是课件、作业还是试卷；识别失败就保留原文件名。</span>' +
+        '</span>' +
+      '</label>' +
       '<div class="banner banner-info">' + icon('info') +
         '<div><div class="banner-title">支持哪些文件？</div>' +
         '<div class="banner-desc">图片（png / jpg / webp / gif / bmp）、文本（txt / md / csv / json）、' +
@@ -926,17 +941,20 @@ function openUploadDialog(options) {
     onMount: function () {
       const k = $('#up-kind');
       const s = $('#up-subject');
+      const ai = $('#up-ai-name');
       if (k) k.addEventListener('change', function () { kind = k.value; });
       if (s) s.addEventListener('change', function () { subject = s.value; });
+      if (ai) ai.addEventListener('change', function () { aiName = ai.checked; });
     }
   });
 
   state.pendingUpload = {
     kind: kind,
     subject: subject,
+    aiName: aiName,
     onDone: opts.onDone || null,
     getValues: function () {
-      return { kind: kind, subject: subject };
+      return { kind: kind, subject: subject, aiName: aiName };
     }
   };
 }
@@ -1110,14 +1128,16 @@ async function startAI(req, handlers) {
   }
 }
 
-function abortAI(requestId) {
+// keepJob=true 时保留任务登记，等主进程的 error/done 事件回来处理，
+// 否则事件到达时找不到任务会被直接丢弃，界面会永久停在"生成中"。
+function abortAI(requestId, keepJob) {
   if (!requestId) return;
   try {
     api.ai.abort(requestId);
   } catch (err) {
     console.warn('[ai abort]', err);
   }
-  state.aiJobs.delete(requestId);
+  if (!keepJob) state.aiJobs.delete(requestId);
 }
 
 /* ============================================================
@@ -2265,7 +2285,8 @@ async function startQuizGeneration() {
     statusText: '正在出题…',
     statusDesc: '正在检索教材与资料',
     search: null,
-    steps: { retrieving: 'active' }
+    steps: { retrieving: 'active' },
+    truncated: false
   };
   state.quizGenText = '';
   render();
@@ -2292,15 +2313,19 @@ async function startQuizGeneration() {
   const job = await startAI(req, {
     onStatus: onQuizStatus,
     onSearch: onQuizSearch,
-    onDelta: function (text) {
+    onDelta: function (text, jobArg) {
+      const currentJob = jobArg || job;
       state.quizGenText = text;
       const box = document.getElementById('gen-stream');
       if (box) {
         box.textContent = text;
         box.scrollTop = box.scrollHeight;
       }
-      if (text.length > 2400) {
-        try { abortAI(job.requestId); } catch (e) { /* ignore */ }
+      // 超过上限时主动截断：只停生成，保留任务登记，等主进程回事件后按"已完成"处理，
+      // 避免停在"正在生成内容…"永远不动。
+      if (!q.gen.truncated && text.length >= QUIZ_STREAM_LIMIT && currentJob && currentJob.requestId) {
+        q.gen.truncated = true;
+        abortAI(currentJob.requestId, true);
       }
       const len = document.getElementById('gen-len');
       if (len) len.textContent = text.length + ' 字';
@@ -2310,6 +2335,11 @@ async function startQuizGeneration() {
       onQuizDone(evt);
     },
     onError: function (evt) {
+      if (q.gen.truncated) {
+        // 截断是我们主动停的，不当作失败：用已收到的内容继续解析题目。
+        onQuizDone({ text: state.quizGenText, json: null, search: q.gen.search, truncated: true });
+        return;
+      }
       onQuizFailed(evt);
     }
   });
@@ -2428,7 +2458,11 @@ function onQuizDone(evt) {
   if (!parsed) {
     q.step = 'error';
     q.raw = evt.text || '';
-    q.error = evt.json ? 'AI 返回了内容，但没有解析出题目' : '模型没有按 JSON 格式返回题目';
+    q.error = evt.truncated
+      ? 'AI 输出太长被截断，题目格式不完整。可以点「重新生成」，或减少题目数量再试。'
+      : evt.json
+        ? 'AI 返回了内容，但没有解析出题目'
+        : '模型没有按 JSON 格式返回题目';
     render();
     return;
   }
@@ -5213,10 +5247,50 @@ ACTIONS['toggle-reasoning'] = function (el) {
 };
 
 /* ---- 材料上传 ---- */
+// 让 AI 读材料内容，给出「科目_知识点」文件名和材料类型。
+// 任何失败（未配置 API、超时、模型不听话）都只回退，不阻塞上传。
+function suggestMaterialMeta(file, vals) {
+  const text = String(file.text || '');
+  const images = file.dataUrl ? [file.dataUrl] : [];
+  if (!text.trim() && !images.length) return Promise.resolve(null);
+  const kindLabel = materialKindLabel(vals.kind);
+  return new Promise(function (resolve) {
+    let settled = false;
+    let job = null;
+    const timer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      try { if (job && job.requestId) abortAI(job.requestId); } catch (e) { /* ignore */ }
+      resolve(null);
+    }, 25000);
+    const finish = function (value) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    startAI({
+      mode: 'materialMeta',
+      messages: [{ role: 'user', content: '请为这份学习材料起名，并判断它属于哪种材料类型。', images: images }],
+      context: {
+        fileName: file.name,
+        subject: vals.subject,
+        kindLabel: kindLabel,
+        text: text.slice(0, 6000)
+      },
+      options: { deepThinking: false, webSearch: false }
+    }, {
+      onDone: function (evt) { finish(evt && evt.json ? evt.json : null); },
+      onError: function () { finish(null); }
+    }).then(function (created) { job = created; });
+  });
+}
+
 async function pickAndAddMaterial() {
   const pick = state.pendingUpload;
   if (!pick) return;
-  const vals = pick.getValues ? pick.getValues() : { kind: pick.kind, subject: pick.subject };
+  if (state.uploading) return;
+  const vals = pick.getValues ? pick.getValues() : { kind: pick.kind, subject: pick.subject, aiName: pick.aiName };
   let file = null;
   try {
     file = await api.dialog.pickMaterial();
@@ -5235,16 +5309,39 @@ async function pickAndAddMaterial() {
     toast('暂不支持 .' + ext + ' 格式：请上传图片、文本，或 .pptx / .docx / .xlsx（会自动转 Markdown）', 'warning', 5600);
     return;
   }
+
+  let name = file.name;
+  let kind = vals.kind || file.kind || 'other';
+  let subject = vals.subject || '综合';
+  let aiMeta = null;
+  if (vals.aiName) {
+    state.uploading = true;
+    toast('AI 正在读材料内容，识别名称和类型…', 'info', 4200);
+    try {
+      aiMeta = await suggestMaterialMeta(file, vals);
+    } finally {
+      state.uploading = false;
+    }
+    if (aiMeta) {
+      if (aiMeta.name) name = aiMeta.name;
+      if (aiMeta.kind) kind = aiMeta.kind;
+      // 科目只在识别得更准（且与手动选择不同）时才覆盖
+      if (aiMeta.subject) subject = aiMeta.subject;
+    }
+  }
+
   try {
     const mat = await api.materials.add({
-      name: file.name,
-      kind: vals.kind || file.kind || 'other',
-      subject: vals.subject || '综合',
+      name: name,
+      kind: kind,
+      subject: subject,
       dataUrl: file.dataUrl,
       text: file.text,
       ext: ext
     });
-    if (file.converted) {
+    if (aiMeta && aiMeta.name) {
+      toast('已按 AI 识别结果保存：' + name + ' · ' + materialKindLabel(kind), 'success', 5200);
+    } else if (file.converted) {
       toast('已把 ' + ext.toUpperCase() + ' 自动转成 Markdown（' + String(file.text || '').length + ' 字）并加入资料库', 'success', 5200);
     } else {
       toast('已上传：' + (mat && mat.name ? mat.name : file.name), 'success');

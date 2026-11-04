@@ -3463,6 +3463,52 @@ body.is-welcome .view {
   width: 100%;
 }
 
+/* 「由 AI 自动生成描述性文件名」开关 */
+.ai-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  transition: border-color 180ms ease-out, background-color 180ms ease-out;
+}
+
+.ai-name-row:hover {
+  border-color: var(--primary);
+}
+
+.ai-name-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.ai-name-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ai-name-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.ai-name-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
 .upload-drop:hover {
   border-color: var(--primary);
   background: var(--primary-soft);
