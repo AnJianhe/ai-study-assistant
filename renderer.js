@@ -4312,8 +4312,10 @@ ACTIONS['export-data'] = async function () {
   try {
     const result = await api.backup.export();
     if (!result) return;
-    const mb = Math.round((result.size || 0) / 1048576 * 10) / 10;
-    toast('已导出学习数据（' + mb + ' MB）：' + result.path, 'success', 7000);
+    const detail = result.size
+      ? '已导出学习数据（' + (Math.round(result.size / 1048576 * 10) / 10) + ' MB）：' + result.path
+      : ('已导出学习数据：' + (result.path || result.message || '完成'));
+    toast(detail, 'success', 7000);
   } catch (err) {
     toast(err && err.message ? err.message : '导出失败', 'error', 6000);
   }
@@ -4322,14 +4324,18 @@ ACTIONS['export-data'] = async function () {
 ACTIONS['import-data'] = async function () {
   const ok = await confirmDialog({
     title: '导入学习数据',
-    message: '导入会用所选 .db 文件覆盖这台设备上的全部学习数据（导入前会自动备份当前数据库）。导入后应用会自动重启。确定继续吗？',
+    message: '导入会用所选 .db 文件覆盖这台设备上的全部学习数据（电脑版会自动备份当前数据库）。导入后应用会重新加载。确定继续吗？',
     confirmText: '选择文件并导入'
   });
   if (!ok) return;
   try {
     const result = await api.backup.import();
     if (!result) return;
-    toast('导入成功，正在重启应用…', 'success', 3000);
+    toast('导入成功，正在重新加载…', 'success', 3000);
+    // 桌面端由主进程重启；安卓端刷新页面即可读到新数据
+    setTimeout(function () {
+      try { location.reload(); } catch (e) { /* ignore */ }
+    }, 1200);
   } catch (err) {
     toast(err && err.message ? err.message : '导入失败', 'error', 6000);
   }

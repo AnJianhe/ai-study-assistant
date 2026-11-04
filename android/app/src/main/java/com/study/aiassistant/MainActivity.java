@@ -3,8 +3,10 @@ package com.study.aiassistant;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
@@ -33,6 +35,7 @@ import android.webkit.WebViewClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -82,7 +85,7 @@ public final class MainActivity extends Activity {
             + "if(r===null)throw new Error('原生接口不可用');var v=JSON.parse(r);"
             + "if(!v.ok)throw new Error('原生接口调用失败');return v.value;}"
             + "var api={};['readFile','writeFile','deleteFile','listFiles','readAsset',"
-            + "'request','cancelRequest','openExternal','pickFiles'].forEach(function(m){"
+            + "'request','cancelRequest','openExternal','pickFiles','backupExport','backupImport'].forEach(function(m){"
             + "api[m]=function(){return call(m,arguments);};});"
             + "Object.defineProperty(window,'StudyNative',{value:Object.freeze(api),"
             + "writable:false,configurable:false});})();";
@@ -93,6 +96,8 @@ public final class MainActivity extends Activity {
             + "worker-src 'none'; object-src 'none'; base-uri 'none'; "
             + "form-action 'none'; frame-ancestors 'none'";
     private static final int PICK_REQUEST = 1701;
+    private static final int EXPORT_REQUEST = 1702;
+    private static final int IMPORT_REQUEST = 1703;
     private static final int MAX_PICK_BYTES = 12 * 1024 * 1024;
     private static final int MAX_FILE_BYTES = 32 * 1024 * 1024;
     private static final int MAX_RESPONSE_CHARS = 16 * 1024 * 1024;
@@ -116,6 +121,9 @@ public final class MainActivity extends Activity {
     private volatile boolean destroyed;
     private String pickId;
     private String pickMode;
+    private volatile String backupId;
+    private volatile File backupTempFile;
+    private volatile String backupMode; // export / import
 
     @Override
     public void onCreate(Bundle state) {
@@ -438,6 +446,12 @@ public final class MainActivity extends Activity {
                 case "pickFiles":
                     if (args.length() != 2) throw new JSONException("invalid arguments");
                     value = bridge.pickFiles(bridgeArgument(args, 0, true), bridgeArgument(args, 1, true)); break;
+                case "backupExport":
+                    if (args.length() != 1) throw new JSONException("invalid arguments");
+                    value = bridge.backupExport(bridgeArgument(args, 0, true)); break;
+                case "backupImport":
+                    if (args.length() != 1) throw new JSONException("invalid arguments");
+                    value = bridge.backupImport(bridgeArgument(args, 0, true)); break;
                 default: throw new JSONException("unknown method");
             }
             put(answer, "ok", true);
@@ -606,6 +620,20 @@ public final class MainActivity extends Activity {
                 pickMode = mode;
             }
             ui.post(() -> launchPicker(id, mode));
+            return true;
+        }
+
+        /** 导出学习数据：true 表示已开始（结果通过 backup 事件返回）。 */
+        public boolean backupExport(String id) {
+            if (!validId(id) || destroyed || backupId != null) return false;
+            exportStudyData(id);
+            return true;
+        }
+
+        /** 导入学习数据：true 表示已开始（结果通过 backup 事件返回）。 */
+        public boolean backupImport(String id) {
+            if (!validId(id) || destroyed || backupId != null) return false;
+            importStudyData(id);
             return true;
         }
     }
@@ -853,6 +881,14 @@ public final class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == EXPORT_REQUEST) {
+            handleExportResult(resultCode, data);
+            return;
+        }
+        if (requestCode == IMPORT_REQUEST) {
+            handleImportResult(resultCode, data);
+            return;
+        }
         if (requestCode != PICK_REQUEST) return;
         final String id;
         final String mode;
@@ -948,6 +984,287 @@ public final class MainActivity extends Activity {
         JSONObject result = event("files", id);
         put(result, "files", files);
         postEvent(result.toString());
+    }
+
+    // ---------- 学习数据导出 / 导入（与电脑共用同一个 .db 文件） ----------
+
+    private static final String DB_SCHEMA_SQL =
+            "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);"
+            + "CREATE TABLE IF NOT EXISTS materials (id TEXT PRIMARY KEY, name TEXT NOT NULL,"
+            + " kind TEXT NOT NULL DEFAULT 'other', subject TEXT NOT NULL DEFAULT '',"
+            + " created_at INTEGER NOT NULL, size INTEGER NOT NULL DEFAULT 0,"
+            + " text TEXT, image_mime TEXT, image_data BLOB, updated_at INTEGER NOT NULL);"
+            + "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);";
+
+    private String readPrivateText(String path) {
+        try {
+            File file = new File(getFilesDir(), path);
+            if (!file.isFile()) return null;
+            try (InputStream in = new FileInputStream(file)) {
+                return decodeUtf8(readBounded(in, MAX_FILE_BYTES));
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void writePrivateText(String path, String text) throws IOException {
+        File file = new File(getFilesDir(), path);
+        File parent = file.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法创建目录");
+        try (java.io.OutputStream out = new FileOutputStream(file)) {
+            out.write(text.getBytes(StandardCharsets.UTF_8));
+            out.flush();
+        }
+    }
+
+    private static void putKv(SQLiteDatabase db, String key, String value) {
+        ContentValues values = new ContentValues();
+        values.put("key", key);
+        values.put("value", value);
+        values.put("updated_at", System.currentTimeMillis());
+        db.insertWithOnConflict("kv", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    // 把当前 JSON 数据打包成标准 SQLite 数据库（列结构与电脑端一致）
+    private File buildExportDatabase() throws Exception {
+        File temp = new File(getFilesDir(), "export-study.db");
+        if (temp.exists() && !temp.delete()) throw new IOException("无法清理旧文件");
+        SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(temp, null);
+        try {
+            for (String sql : DB_SCHEMA_SQL.split(";")) {
+                if (!sql.trim().isEmpty()) db.execSQL(sql);
+            }
+            for (String key : new String[]{"settings", "profile", "scores"}) {
+                String value = readPrivateText("data/" + key + ".json");
+                if (value != null) putKv(db, key, value);
+            }
+            String store = readPrivateText("data/store.json");
+            if (store != null) {
+                JSONObject object = new JSONObject(store);
+                java.util.Iterator<String> keys = object.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    putKv(db, key, object.get(key).toString());
+                }
+            }
+            String index = readPrivateText("data/materials/index.json");
+            if (index != null) {
+                JSONArray items = new JSONArray(index);
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject item = items.optJSONObject(i);
+                    if (item == null) continue;
+                    String imagePath = item.optString("imagePath", "");
+                    byte[] imageData = null;
+                    String mime = null;
+                    if (!imagePath.isEmpty()) {
+                        String dataUrl = readPrivateText("data/materials/" + imagePath);
+                        if (dataUrl != null && dataUrl.startsWith("data:")) {
+                            int semi = dataUrl.indexOf(';');
+                            int comma = dataUrl.indexOf(',');
+                            if (semi > 5 && comma > semi) {
+                                mime = dataUrl.substring(5, semi);
+                                try {
+                                    imageData = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
+                                } catch (IllegalArgumentException ignored) {
+                                    imageData = null;
+                                }
+                            }
+                        }
+                    }
+                    ContentValues values = new ContentValues();
+                    values.put("id", item.optString("id", "mat_" + i));
+                    values.put("name", item.optString("name", "未命名材料"));
+                    values.put("kind", item.optString("kind", "other"));
+                    values.put("subject", item.optString("subject", ""));
+                    values.put("created_at", item.optLong("createdAt", System.currentTimeMillis()));
+                    values.put("size", item.optLong("size", imageData == null ? 0 : imageData.length));
+                    String text = item.optString("text", "");
+                    values.put("text", text.isEmpty() ? null : text);
+                    values.put("image_mime", mime);
+                    values.put("image_data", imageData);
+                    values.put("updated_at", System.currentTimeMillis());
+                    db.insertWithOnConflict("materials", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+                }
+            }
+        } finally {
+            db.close();
+        }
+        return temp;
+    }
+
+    // 把导入的数据库写回本机的 JSON 数据文件
+    private void importFromDatabase(File source) throws Exception {
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(source.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+        try {
+            Cursor check = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='kv'", null);
+            boolean valid = check.moveToFirst();
+            check.close();
+            if (!valid) throw new Exception("这个文件不是学习数据数据库");
+
+            JSONObject store = new JSONObject();
+            Cursor rows = db.rawQuery("SELECT key, value FROM kv", null);
+            try {
+                while (rows.moveToNext()) {
+                    String key = rows.getString(0);
+                    String value = rows.getString(1);
+                    if (key == null || value == null) continue;
+                    if (key.equals("settings") || key.equals("profile") || key.equals("scores")) {
+                        writePrivateText("data/" + key + ".json", value);
+                    } else {
+                        store.put(key, new JSONTokener(value).nextValue());
+                    }
+                }
+            } finally {
+                rows.close();
+            }
+            writePrivateText("data/store.json", store.toString());
+
+            JSONArray index = new JSONArray();
+            Cursor mats = db.rawQuery(
+                    "SELECT id, name, kind, subject, created_at, size, text, image_mime, image_data "
+                            + "FROM materials ORDER BY created_at DESC", null);
+            try {
+                while (mats.moveToNext()) {
+                    JSONObject item = new JSONObject();
+                    String materialId = mats.getString(0);
+                    item.put("id", materialId);
+                    item.put("name", mats.getString(1));
+                    item.put("kind", mats.isNull(2) ? "other" : mats.getString(2));
+                    item.put("subject", mats.isNull(3) ? "" : mats.getString(3));
+                    item.put("createdAt", mats.getLong(4));
+                    item.put("size", mats.getLong(5));
+                    String text = mats.isNull(6) ? "" : mats.getString(6);
+                    if (!text.isEmpty()) item.put("text", text);
+                    if (!mats.isNull(8)) {
+                        byte[] data = mats.getBlob(8);
+                        String mime = mats.isNull(7) ? "image/jpeg" : mats.getString(7);
+                        String imagePath = "uploads/" + materialId + ".data";
+                        writePrivateText("data/materials/" + imagePath,
+                                "data:" + mime + ";base64," + Base64.encodeToString(data, Base64.NO_WRAP));
+                        item.put("imagePath", imagePath);
+                    }
+                    index.put(item);
+                }
+            } finally {
+                mats.close();
+            }
+            writePrivateText("data/materials/index.json", index.toString());
+        } finally {
+            db.close();
+        }
+    }
+
+    private void exportStudyData(String id) {
+        backupId = id;
+        backupMode = "export";
+        bridgePool.execute(() -> {
+            try {
+                File temp = buildExportDatabase();
+                backupTempFile = temp;
+                ui.post(() -> {
+                    if (destroyed) return;
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("application/octet-stream");
+                        intent.putExtra(Intent.EXTRA_TITLE, "AI学习助手-学习数据.db");
+                        startActivityForResult(intent, EXPORT_REQUEST);
+                    } catch (Exception err) {
+                        finishBackup(false, "无法打开保存对话框");
+                    }
+                });
+            } catch (Exception err) {
+                finishBackup(false, "生成导出文件失败：" + err.getMessage());
+            }
+        });
+    }
+
+    private void importStudyData(String id) {
+        backupId = id;
+        backupMode = "import";
+        ui.post(() -> {
+            if (destroyed) return;
+            try {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                startActivityForResult(intent, IMPORT_REQUEST);
+            } catch (Exception err) {
+                finishBackup(false, "无法打开文件选择器");
+            }
+        });
+    }
+
+    private void finishBackup(boolean ok, String message) {
+        String id = backupId;
+        backupId = null;
+        backupMode = null;
+        if (id == null) return;
+        JSONObject event = event("backup", id);
+        put(event, "ok", ok);
+        put(event, "message", message == null ? "" : message);
+        postEvent(event.toString());
+    }
+
+    private void handleExportResult(int resultCode, Intent data) {
+        final String id = backupId;
+        final File temp = backupTempFile;
+        backupTempFile = null;
+        if (id == null) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null || temp == null) {
+            if (temp != null) temp.delete();
+            finishBackup(false, "已取消");
+            return;
+        }
+        final Uri target = data.getData();
+        bridgePool.execute(() -> {
+            try (InputStream in = new FileInputStream(temp);
+                 java.io.OutputStream out = getContentResolver().openOutputStream(target)) {
+                if (out == null) throw new IOException("目标位置不可写");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                out.flush();
+                finishBackup(true, "已导出");
+            } catch (Exception err) {
+                finishBackup(false, "导出失败：" + err.getMessage());
+            } finally {
+                temp.delete();
+            }
+        });
+    }
+
+    private void handleImportResult(int resultCode, Intent data) {
+        if (backupId == null) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            finishBackup(false, "已取消");
+            return;
+        }
+        final Uri source = data.getData();
+        bridgePool.execute(() -> {
+            File temp = new File(getFilesDir(), "import-study.db");
+            try (InputStream in = getContentResolver().openInputStream(source);
+                 java.io.OutputStream out = new FileOutputStream(temp)) {
+                if (in == null) throw new IOException("无法读取所选文件");
+                byte[] buffer = new byte[8192];
+                int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                out.flush();
+            } catch (Exception err) {
+                finishBackup(false, "读取文件失败：" + err.getMessage());
+                temp.delete();
+                return;
+            }
+            try {
+                importFromDatabase(temp);
+                finishBackup(true, "已导入");
+            } catch (Exception err) {
+                finishBackup(false, "导入失败：" + err.getMessage());
+            } finally {
+                temp.delete();
+            }
+        });
     }
 
     private static void unsupported(JSONObject item, String hint) {
