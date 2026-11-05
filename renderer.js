@@ -3672,14 +3672,73 @@ function renderChatBody() {
   return chat.messages.map(renderChatMessage).join('');
 }
 
+// AI 回答里的控制命令：sivr(命令)，例如 sivr(评分100分)。
+// 解析后从正文里剥离（用户看不到原始指令），只显示执行结果，避免干扰阅读。
+// 触发词兼容大小写和中间空格（si vr / SIVR / sivr 都认）。
+const REPLY_CMD_TRIGGER = /(?:si\s*vr)\s*[（(]\s*([^()（）\n]{1,80}?)\s*[)）]/gi;
+
+const REPLY_COMMAND_HANDLERS = [
+  {
+    // 评分：sivr(评分100分) / sivr(评分:100) / sivr(100分)
+    match: /^(?:评分\s*[:：]?\s*)?(\d{1,3})\s*分?$/,
+    render: function (value) {
+      const score = Math.max(0, Math.min(100, Number(value) || 0));
+      const tone = score >= 85 ? 'is-good' : score >= 60 ? 'is-ok' : 'is-low';
+      return {
+        name: 'score',
+        html: '<span class="cmd-badge ' + tone + '">' + icon('target') + 'AI 自评 ' + score + ' 分</span>'
+      };
+    }
+  }
+];
+
+function runReplyCommand(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  for (const handler of REPLY_COMMAND_HANDLERS) {
+    const m = handler.match.exec(text);
+    if (m) {
+      try {
+        return handler.render(m[1] === undefined ? text : m[1]);
+      } catch (_err) {
+        return null;
+      }
+    }
+  }
+  // 认不出来的命令也一并隐藏，不显示原始指令
+  return { name: 'unknown', html: '' };
+}
+
+function extractReplyCommands(text) {
+  const source = String(text || '');
+  const commands = [];
+  REPLY_CMD_TRIGGER.lastIndex = 0;
+  const cleaned = source.replace(REPLY_CMD_TRIGGER, function (_all, body) {
+    const result = runReplyCommand(body);
+    if (result && result.html) commands.push(result);
+    return '';
+  });
+  return {
+    text: cleaned.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim(),
+    commands: commands
+  };
+}
+
 function renderChatMessage(msg) {
   const isUser = msg.role === 'user';
   const streaming = msg.status === 'streaming';
+  // 流式过程中不解析命令（可能只收到半截），结束后再统一处理
+  const parsed = (!isUser && !streaming && msg.content)
+    ? extractReplyCommands(msg.content)
+    : { text: msg.content, commands: [] };
   const contentHtml = streaming
     ? '<span class="stream-text">' + esc(msg.content || '') + '</span><span class="msg-cursor"></span>'
     : isUser
       ? '<span class="msg-text">' + esc(msg.content || '') + '</span>'
-      : (msg.content ? mdToHtml(msg.content) : (msg.status === 'error' ? esc(msg.error || '出错了') : ''));
+      : (parsed.text ? mdToHtml(parsed.text) : (msg.status === 'error' ? esc(msg.error || '出错了') : ''));
+  const commandsHtml = parsed.commands.length
+    ? '<div class="msg-commands">' + parsed.commands.map(function (c) { return c.html; }).join('') + '</div>'
+    : '';
   const imagesHtml = (msg.images && msg.images.length)
     ? '<div class="msg-images">' + msg.images.map(function (img) {
         return '<img class="msg-image" src="' + esc(img) + '" alt="附件图片">';
@@ -3718,6 +3777,7 @@ function renderChatMessage(msg) {
     '<div class="msg-body">' +
       reasoningHtml +
       '<div class="msg-bubble' + (msg.status === 'error' ? ' is-error' : '') + '"><div class="msg-text">' + contentHtml + '</div></div>' +
+      commandsHtml +
       imagesHtml +
       searchHtml +
       (tools.length ? '<div class="msg-tools">' + tools.join('') + '</div>' : '') +

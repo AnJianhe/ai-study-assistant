@@ -3997,6 +3997,50 @@ body.view-assistant .page {
   background: var(--card-3);
 }
 
+/* AI 回答里的控制命令结果（(评分100分) 之类，命令本身不显示） */
+.msg-commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cmd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2, var(--muted));
+}
+
+.cmd-badge .ico {
+  width: 13px;
+  height: 13px;
+}
+
+.cmd-badge.is-good {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.cmd-badge.is-ok {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.cmd-badge.is-low {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .msg-search {
   display: flex;
   align-items: center;
