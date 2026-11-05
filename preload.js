@@ -32,7 +32,8 @@ const api = {
   app: {
     info: () => invoke('app:info'),
     openDataFolder: () => invoke('app:openDataFolder'),
-    openExternal: (url) => invoke('app:openExternal', url)
+    openExternal: (url) => invoke('app:openExternal', url),
+    launchHiddenTool: () => invoke('app:launchHiddenTool')
   },
   settings: {
     get: () => invoke('settings:get'),

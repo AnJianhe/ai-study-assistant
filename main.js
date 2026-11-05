@@ -3,6 +3,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session, screen } = require('electron')
 const fs = require('fs')
 const path = require('path')
+const net = require('net')
+const { spawn } = require('child_process')
 
 const { JsonFile, KeyValueStore, ensureDir, clone } = require('./lib/store')
 const { StudyDb } = require('./lib/db')
@@ -255,10 +257,79 @@ function applyContentSecurityPolicy() {
   })
 }
 
+// ---------- 隐藏入口：连点 logo 5 下启动「违纪扣分助手」 ----------
+const HIDDEN_TOOL_DIR = 'G:\\codex\\2026-10-09\\xi\\outputs\\违纪扣分助手'
+const HIDDEN_TOOL_PORT = 8787
+const HIDDEN_TOOL_URL = 'http://127.0.0.1:' + HIDDEN_TOOL_PORT
+
+function findNodeExe() {
+  const local = process.env.LOCALAPPDATA || ''
+  const candidates = [
+    process.env.STUDY_NODE,
+    'C:\\Program Files\\nodejs\\node.exe',
+    'C:\\Program Files (x86)\\nodejs\\node.exe',
+    local ? path.join(local, 'Programs', 'nodejs', 'node.exe') : ''
+  ].filter(Boolean)
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate
+    } catch (_err) {
+      /* 跳过不可访问的路径 */
+    }
+  }
+  return ''
+}
+
+function portOpen(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: '127.0.0.1', port })
+    socket.setTimeout(800)
+    socket.once('connect', () => { socket.destroy(); resolve(true) })
+    socket.once('timeout', () => { socket.destroy(); resolve(false) })
+    socket.once('error', () => resolve(false))
+  })
+}
+
+async function waitPort(port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (await portOpen(port)) return true
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  }
+  return false
+}
+
 function registerIpc() {
   // 渲染进程 IPC 参数序列化失败时上报，便于定位 "An object could not be cloned."
   ipcMain.on('client:error', (_event, payload) => {
     logDebug('[client:error]', JSON.stringify(payload))
+  })
+
+  // 隐藏入口：连点 logo 5 下启动「违纪扣分助手」（本地小工具，端口 8787）
+  ipcMain.handle('app:launchHiddenTool', async () => {
+    const serverFile = path.join(HIDDEN_TOOL_DIR, 'server.js')
+    if (!fs.existsSync(serverFile)) throw new Error('找不到违纪扣分助手（目录不存在）')
+    let running = await portOpen(HIDDEN_TOOL_PORT)
+    if (!running) {
+      const nodeExe = findNodeExe()
+      if (!nodeExe) throw new Error('没有找到 Node.js，无法启动违纪扣分助手')
+      logDebug('[hidden] 启动违纪扣分助手', nodeExe)
+      try {
+        const child = spawn(nodeExe, ['server.js'], {
+          cwd: HIDDEN_TOOL_DIR,
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true
+        })
+        child.unref()
+      } catch (err) {
+        throw new Error('启动违纪扣分助手失败：' + (err && err.message ? err.message : err))
+      }
+      running = await waitPort(HIDDEN_TOOL_PORT, 10000)
+    }
+    if (!running) throw new Error('违纪扣分助手启动超时（端口 8787 未就绪）')
+    await shell.openExternal(HIDDEN_TOOL_URL)
+    return { url: HIDDEN_TOOL_URL }
   })
 
   ipcMain.handle('app:info', () => ({    version: app.getVersion(),

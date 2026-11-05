@@ -5703,8 +5703,41 @@ function onDocumentKeydown(evt) {
   }
 }
 
+// 隐藏入口：连点左上角 logo 5 下，启动本机的「违纪扣分助手」
+let brandClickCount = 0;
+let brandClickTimer = null;
+
+function handleBrandClick() {
+  brandClickCount += 1;
+  if (brandClickTimer) clearTimeout(brandClickTimer);
+  brandClickTimer = setTimeout(function () {
+    brandClickCount = 0;
+    brandClickTimer = null;
+  }, 2000);
+  if (brandClickCount < 5) return;
+  brandClickCount = 0;
+  clearTimeout(brandClickTimer);
+  brandClickTimer = null;
+  if (!api.app || typeof api.app.launchHiddenTool !== 'function') {
+    toast('当前版本不支持启动该工具', 'warning');
+    return;
+  }
+  Promise.resolve(api.app.launchHiddenTool())
+    .then(function (result) {
+      toast('已启动违纪扣分助手' + (result && result.url ? '：' + result.url : ''), 'success', 5000);
+    })
+    .catch(function (err) {
+      toast(err && err.message ? err.message : '启动违纪扣分助手失败', 'error', 6000);
+    });
+}
+
 function bindGlobalEvents() {
   document.addEventListener('click', onDocumentClick);
+  // 捕获阶段单独监听 logo 连点，不影响其它点击处理
+  document.addEventListener('click', function (event) {
+    const target = event.target;
+    if (target && target.closest && target.closest('.brand-mark')) handleBrandClick();
+  }, true);
   document.addEventListener('input', onDocumentInput);
   document.addEventListener('change', onDocumentInput);
   document.addEventListener('keydown', onDocumentKeydown);
